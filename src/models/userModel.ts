@@ -19,8 +19,9 @@ export class UserModel {
         false,
       ]
     );
-
+    // @ts-ignore
     const insertResult = result as mysql.ResultSetHeader;
+    // @ts-ignore
     return this.findById(insertResult.insertId);
   }
 

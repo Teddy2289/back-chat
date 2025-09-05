@@ -1,11 +1,12 @@
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
-import helmet from "helmet";
 import morgan from "morgan";
 import dotenv from "dotenv";
 import authRoutes from "./routes/authRoutes";
 import photoRoutes from "./routes/photoRoutes";
 import userRoutes from "./routes/userRoutes";
+import modelRoutes from "./routes/modelRoutes";
+import settingsRoutes from "./routes/settingsRoutes";
 
 dotenv.config();
 
@@ -22,6 +23,9 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api/auth", authRoutes);
 app.use("/api/photos", photoRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/models",modelRoutes);
+app.use("/api/settings", settingsRoutes);
+
 
 app.use("/uploads", express.static("uploads"));
 // Route de santé

@@ -1,7 +1,6 @@
 // services/UserService.ts
 import { UserModel } from "../models/userModel";
 import { User, UserType, UpdateUserRequest, CreateUserRequest } from "../types";
-import { PasswordUtils } from "../utils/passwordUtils";
 
 export class UserService {
   /**

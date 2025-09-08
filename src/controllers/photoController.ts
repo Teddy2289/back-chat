@@ -1,7 +1,7 @@
 // controllers/PhotoController.ts
 import { Request, Response } from "express";
 import { createPhotoSchema, updatePhotoSchema } from "../validation/schemas";
-import { handleValidationError, validateRequest } from "../validation/utils";
+import { handleValidationError, validateData } from "../validation/utils";
 import { PhotoService } from "../services/photoService";
 
 export class PhotoController {
@@ -44,8 +44,15 @@ export class PhotoController {
 
   static async createPhoto(req: Request, res: Response) {
     try {
-      const fileUrl = req.file ? `/uploads/${req.file.filename}` : req.body.url;
-      console.log("File URL:", fileUrl);
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          message: "Fichier image requis",
+        });
+      }
+
+      const fileUrl = `/uploads/${req.file.filename}`;
+
       // Gestion des tags
       let tags: string[] = [];
       if (req.body.tags) {
@@ -53,21 +60,20 @@ export class PhotoController {
           tags =
             typeof req.body.tags === "string"
               ? JSON.parse(req.body.tags)
-              : Array.isArray(req.body.tags)
-              ? req.body.tags
-              : [req.body.tags];
+              : req.body.tags;
         } catch (e) {
           tags = [];
         }
       }
 
-      const photoData = validateRequest(createPhotoSchema, {
-        ...req.body,
-        url: fileUrl,
-        tags,
+      // Utilisez validateData au lieu de validateRequest
+      const validatedData = validateData(createPhotoSchema, {
+        alt: req.body.alt,
+        tags: tags,
+        url: fileUrl, // N'OUBLIEZ PAS L'URL
       });
 
-      const result = await PhotoService.createPhoto(photoData);
+      const result = await PhotoService.createPhoto(validatedData);
       res.status(result.success ? 201 : 400).json(result);
     } catch (error) {
       const validationError = handleValidationError(error);
@@ -114,7 +120,8 @@ export class PhotoController {
         }
       }
 
-      const validatedData = validateRequest(updatePhotoSchema, updateData);
+      // Utilisez validateData ici aussi
+      const validatedData = validateData(updatePhotoSchema, updateData);
       const result = await PhotoService.updatePhoto(photoId, validatedData);
 
       res.status(result.success ? 200 : 400).json(result);
@@ -131,7 +138,6 @@ export class PhotoController {
       });
     }
   }
-
   static async deletePhoto(req: Request, res: Response) {
     try {
       const { id } = req.params;

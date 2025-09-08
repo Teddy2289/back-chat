@@ -8,18 +8,58 @@ const router = express.Router();
 // ✅ Route publique - Paramètres pour le frontend
 router.get("/frontend", SettingsController.getFrontendSettings);
 
-// 🔒 Routes protégées admin - Gestion complète des paramètres
-router.get("/", authenticateToken, requireAdmin, SettingsController.getAllSettings);
-router.get("/:section", authenticateToken, requireAdmin, SettingsController.getSectionSettings);
+// 🔒 Routes protégées admin
+router.get(
+  "/",
+  authenticateToken,
+  requireAdmin,
+  SettingsController.getAllSettings
+);
+router.get(
+  "/:section",
+  authenticateToken,
+  requireAdmin,
+  SettingsController.getSectionSettings
+);
 
 // Mise à jour des sections spécifiques
-router.put("/general", authenticateToken, requireAdmin, SettingsController.updateGeneralSettings);
-router.put("/logo", authenticateToken, requireAdmin, SettingsController.updateLogoSettings);
-router.put("/home", authenticateToken, requireAdmin, SettingsController.updateHomeSettings);
-router.put("/gallery", authenticateToken, requireAdmin, SettingsController.updateGallerySettings);
-router.put("/about", authenticateToken, requireAdmin, SettingsController.updateAboutSettings);
+router.put(
+  "/general",
+  authenticateToken,
+  requireAdmin,
+  SettingsController.updateGeneralSettings
+);
+router.put(
+  "/logo",
+  authenticateToken,
+  requireAdmin,
+  SettingsController.updateLogoSettings
+);
+router.put(
+  "/home",
+  authenticateToken,
+  requireAdmin,
+  SettingsController.updateHomeSettings
+);
+router.put(
+  "/gallery",
+  authenticateToken,
+  requireAdmin,
+  SettingsController.updateGallerySettings
+);
+router.put(
+  "/about",
+  authenticateToken,
+  requireAdmin,
+  SettingsController.updateAboutSettings
+);
 
 // Activation/désactivation des sections
-router.patch("/:section/toggle", authenticateToken, requireAdmin, SettingsController.toggleSection);
+router.patch(
+  "/:section/toggle",
+  authenticateToken,
+  requireAdmin,
+  SettingsController.toggleSection
+);
 
 export default router;

@@ -67,8 +67,14 @@ export class ModelController {
 
   static async createModel(req: Request, res: Response) {
     try {
-      const modelData = validateRequest(createModelSchema, req);
+      const modelDataRaw = validateRequest(createModelSchema, req);
       const photoFile = req.file as Express.Multer.File | undefined;
+
+      // Ensure age is a number (not undefined)
+      const modelData = {
+        ...modelDataRaw,
+        age: typeof modelDataRaw.age === "number" ? modelDataRaw.age : 0, // or set a default value
+      };
 
       const model = await ModelService.create(modelData, photoFile);
       res.status(201).json({
@@ -103,6 +109,7 @@ export class ModelController {
 
   static async updateModel(req: Request, res: Response) {
     try {
+      console.log(req.body);
       const { id } = req.params;
       const modelId = parseInt(id);
 
@@ -113,8 +120,19 @@ export class ModelController {
         });
       }
 
-      const modelData = validateRequest(updateModelSchema, req);
+      const modelDataRaw = validateRequest(updateModelSchema, req);
       const photoFile = req.file as Express.Multer.File | undefined;
+
+      // Ensure age is a number or undefined
+      const modelData = {
+        ...modelDataRaw,
+        age:
+          typeof modelDataRaw.age === "string"
+            ? modelDataRaw.age === ""
+              ? undefined
+              : Number(modelDataRaw.age)
+            : modelDataRaw.age,
+      };
 
       const model = await ModelService.update(modelId, modelData, photoFile);
       res.status(200).json({

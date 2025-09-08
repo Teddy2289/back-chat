@@ -61,10 +61,16 @@ export const userSearchSchema = z.object({
 export const createModelSchema = z.object({
   prenom: z.string().min(1, "Le prénom est requis"),
   age: z
-    .number()
-    .int()
-    .min(0, "L'âge doit être positif")
-    .max(150, "Âge invalide"),
+    .string()
+    .optional()
+    .transform((val) => (val !== undefined ? Number(val) : undefined))
+    .refine(
+      (val) => val === undefined || (!isNaN(val) && val >= 0 && val <= 150),
+      {
+        message: "L'âge doit être compris entre 0 et 150",
+      }
+    ),
+
   nationalite: z.string().min(1, "La nationalité est requise"),
   passe_temps: z.string().min(1, "Le passe-temps est requis"),
   citation: z.string().min(1, "La citation est requise"),
@@ -75,20 +81,29 @@ export const createModelSchema = z.object({
 
 export const updateModelSchema = z.object({
   prenom: z.string().min(1, "Le prénom est requis").optional(),
+  nationalite: z.string().optional(),
+  passe_temps: z.string().optional(),
+  citation: z.string().optional(),
+  domicile: z.string().optional(),
+  localisation: z.string().optional(),
   age: z
-    .number()
-    .int()
-    .min(0, "L'âge doit être positif")
-    .max(150, "Âge invalide")
-    .optional(),
-  nationalite: z.string().min(1, "La nationalité est requise").optional(),
-  passe_temps: z.string().min(1, "Le passe-temps est requis").optional(),
-  citation: z.string().min(1, "La citation est requise").optional(),
-  domicile: z.string().min(1, "Le domicile est requis").optional(),
-  photo: z.string().optional(),
-  localisation: z.string().min(1, "La localisation est requise").optional(),
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((val) => {
+      if (typeof val === "string" && val.trim() !== "") {
+        return Number(val);
+      }
+      return val;
+    })
+    .refine(
+      (val) =>
+        val === undefined ||
+        (typeof val === "number" && val >= 0 && val <= 150),
+      {
+        message: "L'âge doit être compris entre 0 et 150",
+      }
+    ),
 });
-
 export const modelSearchSchema = z.object({
   prenom: z.string().optional(),
   nationalite: z.string().optional(),
@@ -99,13 +114,13 @@ export const modelSearchSchema = z.object({
 
 // Photo Schemas
 export const createPhotoSchema = z.object({
-  url: z.string().url("URL invalide"),
+  url: z.string().min(1, "URL de l'image requise"),
   alt: z.string().min(1, "Le texte alternatif est requis"),
   tags: z.array(z.string()).default([]),
 });
 
 export const updatePhotoSchema = z.object({
-  url: z.string().url("URL invalide").optional(),
+  url: z.string().min(1, "URL de l'image requise").optional(),
   alt: z.string().min(1, "Le texte alternatif est requis").optional(),
   tags: z.array(z.string()).optional(),
 });

@@ -41,48 +41,16 @@ export const validateLogin = (
   next();
 };
 
-export const validatePhoto = [
-  body("alt")
-    .isLength({ min: 1, max: 255 })
-    .withMessage("Le titre doit contenir entre 1 et 255 caractères"),
-  body("tags")
-    .custom((value: any) => {
-      try {
-        const tags = JSON.parse(value);
-        return Array.isArray(tags) && tags.length <= 10;
-      } catch {
-        return false;
-      }
-    })
-    .withMessage(
-      "Les tags doivent être un tableau JSON valide avec maximum 10 éléments"
-    ),
-  body("tags")
-    .custom((value: any) => {
-      try {
-        const tags = JSON.parse(value);
-        return tags.every(
-          (tag: any) =>
-            typeof tag === "string" && tag.length >= 1 && tag.length <= 50
-        );
-      } catch {
-        return false;
-      }
-    })
-    .withMessage("Chaque tag doit être une chaîne entre 1 et 50 caractères"),
-  (req: Request, res: Response, next: NextFunction): void => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      res.status(400).json({
-        success: false,
-        message: "Données d'entrée non valides",
-        errors: errors.array(),
-      });
-      return;
-    }
-    next();
-  },
-];
+// Remplacez le middleware validatePhoto par ceci :
+export const validatePhoto = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
+  // Middleware simplifié qui ne fait que passer
+  // La validation réelle se fait dans le contrôleur
+  next();
+};
 
 // Middleware pour vérifier la taille du fichier (10MB max)
 export const checkFileSize = (

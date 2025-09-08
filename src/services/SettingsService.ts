@@ -17,7 +17,26 @@ export class SettingsService {
    */
   static async getAllSettings(): Promise<SiteSettings[]> {
     try {
-      return await SettingsModel.findAll();
+      const settings = await SettingsModel.findAll();
+
+      // Vérifier si la section logo existe
+      const hasLogo = settings.some((setting) => setting.section === "logo");
+
+      // Si la section logo n'existe pas, la créer avec des valeurs par défaut
+      if (!hasLogo) {
+        const defaultLogoSettings: LogoSettings = {
+          logo_type: "text",
+          logo_text: "Mon Site",
+          logo_image: undefined,
+        };
+        await SettingsModel.upsert("logo", defaultLogoSettings, true);
+        console.log("Section logo créée avec les paramètres par défaut");
+
+        // Récupérer à nouveau toutes les settings pour inclure la nouvelle section
+        return await SettingsModel.findAll();
+      }
+
+      return settings;
     } catch (error) {
       console.error("Error fetching settings:", error);
       throw new Error("Erreur lors de la récupération des paramètres");
@@ -218,6 +237,122 @@ export class SettingsService {
       throw new Error(
         "Erreur lors de la récupération des paramètres pour le frontend"
       );
+    }
+  }
+
+  /**
+   * Crée ou met à jour les paramètres d'une section
+   */
+  static async upsertSectionSettings(
+    section: SettingsSection,
+    settings: any,
+    isActive: boolean = true
+  ): Promise<SiteSettings> {
+    try {
+      // Validation selon la section
+      switch (section) {
+        case "general":
+          this.validateGeneralSettings(settings as GeneralSettings);
+          break;
+        case "logo":
+          this.validateLogoSettings(settings as LogoSettings);
+          break;
+        case "home":
+          this.validateHomeSettings(settings as HomeSettings);
+          break;
+        case "gallery":
+          this.validateGallerySettings(settings as GallerySettings);
+          break;
+        case "about":
+          await this.validateAboutSettings(settings as AboutSettings);
+          break;
+        default:
+          throw new Error(`Section inconnue: ${section}`);
+      }
+
+      return await SettingsModel.upsert(section, settings, isActive);
+    } catch (error) {
+      console.error(`Error upserting ${section} settings:`, error);
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error(`Erreur lors de la mise à jour de la section ${section}`);
+    }
+  }
+
+  // Méthodes de validation spécifiques
+  private static validateGeneralSettings(settings: GeneralSettings): void {
+    if (!settings.site_title) {
+      throw new Error("Le titre du site est requis");
+    }
+  }
+
+  private static validateLogoSettings(settings: LogoSettings): void {
+    if (settings.logo_type === "image" && !settings.logo_image) {
+      throw new Error("Une image de logo est requise pour le type 'image'");
+    }
+    if (settings.logo_type === "text" && !settings.logo_text) {
+      throw new Error("Un texte de logo est requis pour le type 'text'");
+    }
+  }
+
+  // Dans SettingsService.ts
+  static async initializeLogoSettings(): Promise<void> {
+    try {
+      const existingLogo = await SettingsModel.findBySection("logo");
+      if (!existingLogo) {
+        const defaultLogoSettings: LogoSettings = {
+          logo_type: "text",
+          logo_text: "Mon Site",
+          logo_image: undefined,
+          inline_size: 150,
+          logo_height: 50,
+        };
+        await SettingsModel.upsert("logo", defaultLogoSettings, true);
+        console.log("Section logo initialisée avec les paramètres par défaut");
+      }
+    } catch (error) {
+      console.error("Erreur lors de l'initialisation du logo:", error);
+    }
+  }
+
+  // Appelez cette méthode au démarrage de votre application
+
+  private static validateHomeSettings(settings: HomeSettings): void {
+    if (!settings.main_title) {
+      throw new Error("Le titre principal est requis");
+    }
+    if (settings.slides) {
+      settings.slides.forEach((slide, index) => {
+        if (slide.is_active && (!slide.image || !slide.title)) {
+          throw new Error(
+            `La slide ${index + 1} active doit avoir une image et un titre`
+          );
+        }
+      });
+    }
+  }
+
+  private static validateGallerySettings(settings: GallerySettings): void {
+    if (!settings.gallery_title) {
+      throw new Error("Le titre de la galerie est requis");
+    }
+    if (settings.items_per_page < 1 || settings.items_per_page > 100) {
+      throw new Error("Le nombre d'items par page doit être entre 1 et 100");
+    }
+  }
+
+  private static async validateAboutSettings(
+    settings: AboutSettings
+  ): Promise<void> {
+    if (!settings.about_title) {
+      throw new Error("Le titre À propos est requis");
+    }
+    if (settings.selected_model_id) {
+      const model = await ModelService.findById(settings.selected_model_id);
+      if (!model) {
+        throw new Error("Le modèle sélectionné n'existe pas");
+      }
     }
   }
 }

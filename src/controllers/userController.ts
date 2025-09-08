@@ -1,15 +1,21 @@
+// controllers/UserController.ts
 import { Request, Response } from "express";
 import { UserService } from "../services/userService";
-import { CreateUserRequest, UpdateUserRequest } from "../types";
+import {
+  createUserSchema,
+  updateUserSchema,
+  userSearchSchema,
+} from "../validation/schemas";
+import {
+  handleValidationError,
+  validateRequest,
+  validateQuery,
+} from "../validation/utils";
 
 export class UserController {
-  /**
-   * Récupère tous les utilisateurs
-   */
   static async getAllUsers(req: Request, res: Response) {
     try {
       const users = await UserService.findAll();
-
       res.status(200).json({
         success: true,
         message: "Utilisateurs récupérés avec succès",
@@ -25,22 +31,19 @@ export class UserController {
     }
   }
 
-  /**
-   * Récupère un utilisateur par son ID
-   */
   static async getUserById(req: Request, res: Response) {
     try {
       const { id } = req.params;
+      const userId = parseInt(id);
 
-      if (!id || isNaN(parseInt(id))) {
+      if (isNaN(userId) || userId <= 0) {
         return res.status(400).json({
           success: false,
           message: "ID utilisateur invalide",
         });
       }
 
-      const user = await UserService.findById(parseInt(id));
-
+      const user = await UserService.findById(userId);
       if (!user) {
         return res.status(404).json({
           success: false,
@@ -62,27 +65,9 @@ export class UserController {
     }
   }
 
-  /**
-   * Crée un nouvel utilisateur
-   */
   static async createUser(req: Request, res: Response) {
     try {
-      const userData: CreateUserRequest = req.body;
-
-      // Validation des champs requis
-      if (
-        !userData.email ||
-        !userData.password ||
-        !userData.first_name ||
-        !userData.last_name
-      ) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "Tous les champs obligatoires doivent être remplis (email, password, first_name, last_name)",
-        });
-      }
-
+      const userData = validateRequest(createUserSchema, req);
       const user = await UserService.create(userData);
 
       res.status(201).json({
@@ -91,8 +76,12 @@ export class UserController {
         data: user,
       });
     } catch (error) {
-      console.error("Create user error:", error);
+      const validationError = handleValidationError(error);
+      if (!validationError.success) {
+        return res.status(400).json(validationError);
+      }
 
+      console.error("Create user error:", error);
       if (error instanceof Error) {
         if (error.message.includes("existe déjà")) {
           return res.status(409).json({
@@ -100,11 +89,6 @@ export class UserController {
             message: error.message,
           });
         }
-
-        return res.status(400).json({
-          success: false,
-          message: error.message,
-        });
       }
 
       res.status(500).json({
@@ -114,23 +98,20 @@ export class UserController {
     }
   }
 
-  /**
-   * Met à jour un utilisateur existant
-   */
   static async updateUser(req: Request, res: Response) {
     try {
       const { id } = req.params;
+      const userId = parseInt(id);
 
-      if (!id || isNaN(parseInt(id))) {
+      if (isNaN(userId) || userId <= 0) {
         return res.status(400).json({
           success: false,
           message: "ID utilisateur invalide",
         });
       }
 
-      const userData: UpdateUserRequest = req.body;
-
-      const user = await UserService.update(parseInt(id), userData);
+      const userData = validateRequest(updateUserSchema, req);
+      const user = await UserService.update(userId, userData);
 
       res.status(200).json({
         success: true,
@@ -138,8 +119,12 @@ export class UserController {
         data: user,
       });
     } catch (error) {
-      console.error("Update user error:", error);
+      const validationError = handleValidationError(error);
+      if (!validationError.success) {
+        return res.status(400).json(validationError);
+      }
 
+      console.error("Update user error:", error);
       if (error instanceof Error) {
         if (error.message.includes("non trouvé")) {
           return res.status(404).json({
@@ -147,18 +132,12 @@ export class UserController {
             message: error.message,
           });
         }
-
         if (error.message.includes("utilise déjà cet email")) {
           return res.status(409).json({
             success: false,
             message: error.message,
           });
         }
-
-        return res.status(400).json({
-          success: false,
-          message: error.message,
-        });
       }
 
       res.status(500).json({
@@ -168,29 +147,25 @@ export class UserController {
     }
   }
 
-  /**
-   * Supprime un utilisateur
-   */
   static async deleteUser(req: Request, res: Response) {
     try {
       const { id } = req.params;
+      const userId = parseInt(id);
 
-      if (!id || isNaN(parseInt(id))) {
+      if (isNaN(userId) || userId <= 0) {
         return res.status(400).json({
           success: false,
           message: "ID utilisateur invalide",
         });
       }
 
-      await UserService.delete(parseInt(id));
-
+      await UserService.delete(userId);
       res.status(200).json({
         success: true,
         message: "Utilisateur supprimé avec succès",
       });
     } catch (error) {
       console.error("Delete user error:", error);
-
       if (error instanceof Error) {
         if (error.message.includes("non trouvé")) {
           return res.status(404).json({
@@ -198,11 +173,6 @@ export class UserController {
             message: error.message,
           });
         }
-
-        return res.status(400).json({
-          success: false,
-          message: error.message,
-        });
       }
 
       res.status(500).json({
@@ -212,26 +182,10 @@ export class UserController {
     }
   }
 
-  /**
-   * Recherche des utilisateurs par critères
-   */
   static async searchUsers(req: Request, res: Response) {
     try {
-      const { email, first_name, last_name, type, is_verified } = req.query;
-
-      // Convertir is_verified en boolean si fourni
-      let isVerifiedBool: boolean | undefined;
-      if (is_verified !== undefined) {
-        isVerifiedBool = is_verified === "true" || is_verified === "1";
-      }
-
-      const users = await UserService.search({
-        email: email as string,
-        first_name: first_name as string,
-        last_name: last_name as string,
-        type: type as any,
-        is_verified: isVerifiedBool,
-      });
+      const criteria = validateQuery(userSearchSchema, req);
+      const users = await UserService.search(criteria);
 
       res.status(200).json({
         success: true,
@@ -240,6 +194,11 @@ export class UserController {
         count: users.length,
       });
     } catch (error) {
+      const validationError = handleValidationError(error);
+      if (!validationError.success) {
+        return res.status(400).json(validationError);
+      }
+
       console.error("Search users error:", error);
       res.status(500).json({
         success: false,
@@ -248,14 +207,9 @@ export class UserController {
     }
   }
 
-  /**
-   * Récupère le profil de l'utilisateur connecté
-   */
   static async getProfile(req: Request, res: Response) {
     try {
-      // L'utilisateur est attaché à la requête par le middleware d'authentification
       const user = (req as any).user;
-
       res.status(200).json({
         success: true,
         message: "Profil récupéré avec succès",
@@ -270,15 +224,12 @@ export class UserController {
     }
   }
 
-  /**
-   * Met à jour le profil de l'utilisateur connecté
-   */
   static async updateProfile(req: Request, res: Response) {
     try {
       const user = (req as any).user;
-      const userData: UpdateUserRequest = req.body;
+      const userData = validateRequest(updateUserSchema, req);
 
-      // Empêcher la modification du type et du statut de vérification via le profil
+      // Empêcher la modification du type et du statut de vérification
       if (userData.type !== undefined || userData.is_verified !== undefined) {
         return res.status(403).json({
           success: false,
@@ -287,15 +238,18 @@ export class UserController {
       }
 
       const updatedUser = await UserService.update(user.id, userData);
-
       res.status(200).json({
         success: true,
         message: "Profil mis à jour avec succès",
         data: updatedUser,
       });
     } catch (error) {
-      console.error("Update profile error:", error);
+      const validationError = handleValidationError(error);
+      if (!validationError.success) {
+        return res.status(400).json(validationError);
+      }
 
+      console.error("Update profile error:", error);
       if (error instanceof Error) {
         if (error.message.includes("utilise déjà cet email")) {
           return res.status(409).json({
@@ -303,11 +257,6 @@ export class UserController {
             message: error.message,
           });
         }
-
-        return res.status(400).json({
-          success: false,
-          message: error.message,
-        });
       }
 
       res.status(500).json({

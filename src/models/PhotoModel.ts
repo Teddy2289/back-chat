@@ -1,87 +1,105 @@
-import pool from "../config/database";
+// models/PhotoModel.ts
+import prisma from "../config/prisma";
 import { Photo } from "../types";
 
 export class PhotoModel {
-  static async findAll(): Promise<Photo[]> {
-    const [rows] = await pool.execute(
-      "SELECT * FROM photos ORDER BY created_at DESC"
-    );
-    return rows as Photo[];
+  private static convertTags(tags: any): string[] {
+    if (Array.isArray(tags)) {
+      return tags.filter((tag) => typeof tag === "string");
+    }
+    return [];
   }
+  static async findAll(): Promise<Photo[]> {
+    const photos = await prisma.photo.findMany({
+      orderBy: { created_at: "desc" },
+    });
 
+    return photos.map((photo) => ({
+      ...photo,
+      tags: this.convertTags(photo.tags),
+    }));
+  }
   static async findById(id: number): Promise<Photo | null> {
-    const [rows] = await pool.execute("SELECT * FROM photos WHERE id = ?", [
-      id,
-    ]);
-    const photos = rows as Photo[];
-    return photos.length > 0 ? photos[0] : null;
+    const photo = await prisma.photo.findUnique({
+      where: { id },
+    });
+
+    return photo
+      ? {
+          ...photo,
+          tags: this.convertTags(photo.tags),
+        }
+      : null;
   }
 
   static async create(
-    photo: Omit<Photo, "id" | "created_at" | "updated_at" | "likes">
+    photoData: Omit<Photo, "id" | "created_at" | "updated_at" | "likes">
   ): Promise<Photo> {
-    const [result] = await pool.execute(
-      `INSERT INTO photos (url, alt, tags) VALUES (?, ?, ?)`,
-      [photo.url, photo.alt, JSON.stringify(photo.tags)]
-    );
+    const photo = await prisma.photo.create({
+      data: {
+        url: photoData.url,
+        alt: photoData.alt,
+        tags: photoData.tags, // Prisma gère automatiquement la conversion
+        likes: 0,
+      },
+    });
 
-    const insertResult = result as any;
-    return this.findById(insertResult.insertId);
+    return {
+      ...photo,
+      tags: this.convertTags(photo.tags),
+    };
   }
-
   static async update(
     id: number,
     photoData: Partial<Photo>
   ): Promise<Photo | null> {
-    const updates: string[] = [];
-    const values: any[] = [];
+    const photo = await prisma.photo.update({
+      where: { id },
+      data: photoData,
+    });
 
-    if (photoData.url) {
-      updates.push("url = ?");
-      values.push(photoData.url);
-    }
-
-    if (photoData.alt) {
-      updates.push("alt = ?");
-      values.push(photoData.alt);
-    }
-
-    if (photoData.tags) {
-      updates.push("tags = ?");
-      values.push(JSON.stringify(photoData.tags));
-    }
-
-    if (updates.length > 0) {
-      updates.push("updated_at = CURRENT_TIMESTAMP");
-      values.push(id);
-
-      const query = `UPDATE photos SET ${updates.join(", ")} WHERE id = ?`;
-      await pool.execute(query, values);
-    }
-
-    return this.findById(id);
+    return photo
+      ? {
+          ...photo,
+          tags: this.convertTags(photo.tags),
+        }
+      : null;
   }
 
   static async delete(id: number): Promise<boolean> {
-    const [result] = await pool.execute("DELETE FROM photos WHERE id = ?", [
-      id,
-    ]);
-    const deleteResult = result as any;
-    return deleteResult.affectedRows > 0;
+    const result = await prisma.photo.delete({
+      where: { id },
+    });
+    return result !== null;
   }
 
   static async incrementLikes(id: number): Promise<Photo | null> {
-    await pool.execute("UPDATE photos SET likes = likes + 1 WHERE id = ?", [
-      id,
-    ]);
-    return this.findById(id);
+    const photo = await prisma.photo.update({
+      where: { id },
+      data: { likes: { increment: 1 } },
+    });
+
+    return photo
+      ? {
+          ...photo,
+          tags: this.convertTags(photo.tags),
+        }
+      : null;
   }
 
   static async findByTag(tag: string): Promise<Photo[]> {
-    const [rows] = await pool.execute(
-      "SELECT * FROM photos WHERE JSON_CONTAINS(tags, JSON_QUOTE(?)) ORDER BY created_at DESC",
-      [tag]
-    );
-    return rows as Photo[];
+    const photos = await prisma.photo.findMany({
+      where: {
+        tags: {
+          array_contains: tag,
+        },
+      },
+      orderBy: { created_at: "desc" },
+    });
+
+    return photos.map((photo) => ({
+      ...photo,
+      tags: this.convertTags(photo.tags),
+    }));
   }
 }

@@ -1,0 +1,82 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  Int                 @id @default(autoincrement())
+  email               String              @unique
+  password            String
+  first_name          String
+  last_name           String
+  type                UserType            @default(USER)
+  is_verified         Boolean             @default(false)
+  created_at          DateTime            @default(now())
+  updated_at          DateTime            @updatedAt
+  verification_tokens VerificationToken[]
+
+  @@map("users")
+}
+
+enum UserType {
+  ADMIN
+  AGENT
+  CLIENT
+  USER
+}
+
+model VerificationToken {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  token      String
+  expires_at DateTime
+  created_at DateTime @default(now())
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("verification_tokens")
+}
+
+model Model {
+  id           Int      @id @default(autoincrement())
+  prenom       String
+  age          Int
+  nationalite  String
+  passe_temps  String
+  citation     String
+  domicile     String
+  photo        String?
+  localisation String
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  @@map("models")
+}
+
+model Photo {
+  id         Int      @id @default(autoincrement())
+  url        String
+  alt        String
+  tags       Json
+  likes      Int      @default(0)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("photos")
+}
+
+model SiteSettings {
+  id         Int      @id @default(autoincrement())
+  section    String
+  settings   Json
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([section])
+  @@map("site_settings")
+}

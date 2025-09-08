@@ -25,7 +25,7 @@ export class EmailService {
     if (!this.transporter) {
       this.initializeTransporter();
     }
-
+    console.log("BASE_URL", process.env.BASE_URL);
     const verificationUrl = `${process.env.BASE_URL}/api/auth/verify-email?userId=${user.id}&token=${verificationToken}`;
 
     const mailOptions = {

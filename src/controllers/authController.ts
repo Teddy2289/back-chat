@@ -1,17 +1,27 @@
+// controllers/AuthController.ts
 import { Request, Response } from "express";
 import { AuthService } from "../services/authService";
+import {
+  registerSchema,
+  loginSchema,
+  verifyEmailSchema,
+  resendVerificationSchema,
+} from "../validation/schemas";
+import { handleValidationError, validateRequest } from "../validation/utils";
 
 export class AuthController {
   static async register(req: Request, res: Response) {
     try {
-      const result = await AuthService.register(req.body);
+      const userData = validateRequest(registerSchema, req);
+      const result = await AuthService.register(userData);
 
-      if (result.success) {
-        res.status(201).json(result);
-      } else {
-        res.status(400).json(result);
-      }
+      res.status(result.success ? 201 : 400).json(result);
     } catch (error) {
+      const validationError = handleValidationError(error);
+      if (!validationError.success) {
+        return res.status(400).json(validationError);
+      }
+
       console.error("Register controller error:", error);
       res.status(500).json({
         success: false,
@@ -22,14 +32,16 @@ export class AuthController {
 
   static async login(req: Request, res: Response) {
     try {
-      const result = await AuthService.login(req.body);
+      const loginData = validateRequest(loginSchema, req);
+      const result = await AuthService.login(loginData);
 
-      if (result.success) {
-        res.status(200).json(result);
-      } else {
-        res.status(401).json(result);
-      }
+      res.status(result.success ? 200 : 401).json(result);
     } catch (error) {
+      const validationError = handleValidationError(error);
+      if (!validationError.success) {
+        return res.status(400).json(validationError);
+      }
+
       console.error("Login controller error:", error);
       res.status(500).json({
         success: false,
@@ -40,9 +52,7 @@ export class AuthController {
 
   static async getProfile(req: Request, res: Response) {
     try {
-      // L'utilisateur est attaché à la requête par le middleware d'authentification
       const user = (req as any).user;
-
       res.status(200).json({
         success: true,
         message: "Profil récupéré avec succès",
@@ -56,28 +66,26 @@ export class AuthController {
       });
     }
   }
+
   static async verifyEmail(req: Request, res: Response) {
     try {
       const { userId, token } = req.query;
-
-      if (!userId || !token) {
-        return res.status(400).json({
-          success: false,
-          message: "Paramètres userId et token requis",
-        });
-      }
+      const validated = verifyEmailSchema.parse({
+        userId: parseInt(userId as string),
+        token: token as string,
+      });
 
       const result = await AuthService.verifyEmail(
-        parseInt(userId as string),
-        token as string
+        validated.userId,
+        validated.token
       );
-
-      if (result.success) {
-        res.status(200).json(result);
-      } else {
-        res.status(400).json(result);
-      }
+      res.status(result.success ? 200 : 400).json(result);
     } catch (error) {
+      const validationError = handleValidationError(error);
+      if (!validationError.success) {
+        return res.status(400).json(validationError);
+      }
+
       console.error("Verify email controller error:", error);
       res.status(500).json({
         success: false,
@@ -85,25 +93,19 @@ export class AuthController {
       });
     }
   }
+
   static async resendVerificationEmail(req: Request, res: Response) {
     try {
-      const { email } = req.body;
-
-      if (!email) {
-        return res.status(400).json({
-          success: false,
-          message: "L'email est requis",
-        });
-      }
-
+      const { email } = validateRequest(resendVerificationSchema, req);
       const result = await AuthService.resendVerificationEmail(email);
 
-      if (result.success) {
-        res.status(200).json(result);
-      } else {
-        res.status(400).json(result);
-      }
+      res.status(result.success ? 200 : 400).json(result);
     } catch (error) {
+      const validationError = handleValidationError(error);
+      if (!validationError.success) {
+        return res.status(400).json(validationError);
+      }
+
       console.error("Resend verification controller error:", error);
       res.status(500).json({
         success: false,

@@ -1,3 +1,4 @@
+// services/PhotoService.ts
 import { PhotoModel } from "../models/PhotoModel";
 import { Photo } from "../types";
 

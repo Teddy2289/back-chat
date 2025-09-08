@@ -53,7 +53,7 @@ router.post(
   "/",
   authenticateToken,
   requireAdmin,
-  upload.single("image"), // multer d'abord
+  upload.single("file"), // multer d'abord
   (req: Request, res: Response, next: NextFunction) => {
     // console.log("Champs reçus:", req.body);
     next();

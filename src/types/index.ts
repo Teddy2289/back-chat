@@ -1,9 +1,9 @@
-export enum UserType {
-  ADMIN = "Admin",
-  AGENT = "Agent",
-  CLIENT = "Client",
-  USER = "User",
-}
+import { JsonValue } from "../generated/prisma/runtime/library";
+import { UserType as PrismaUserType } from "../generated/prisma";
+
+// Utilisez le type de Prisma directement
+export type UserType = PrismaUserType;
+
 export interface User {
   id?: number;
   email: string;
@@ -13,7 +13,7 @@ export interface User {
   is_verified?: boolean;
   created_at?: Date;
   updated_at?: Date;
-  type?: UserType;
+  type: UserType;
 }
 
 export interface RegisterRequest {
@@ -52,7 +52,7 @@ export interface Photo {
   id: number;
   url: string;
   alt: string;
-  tags: string[];
+  tags: JsonValue[];
   likes: number;
   created_at: Date;
   updated_at: Date;
@@ -84,7 +84,7 @@ export interface Model {
   passe_temps: string;
   citation: string;
   domicile: string;
-  photo?:string;
+  photo?: string;
   localisation: string;
   created_at: Date;
   updated_at: Date;
@@ -97,7 +97,7 @@ export interface CreateModelRequest {
   passe_temps: string;
   citation: string;
   domicile: string;
-  photo?:string;
+  photo?: string;
   localisation: string;
 }
 
@@ -108,7 +108,7 @@ export interface UpdateModelRequest {
   passe_temps?: string;
   citation?: string;
   domicile?: string;
-  photo?:string;
+  photo?: string;
   localisation?: string;
 }
 
@@ -124,7 +124,7 @@ export interface GeneralSettings {
 }
 
 export interface LogoSettings {
-  logo_type: 'image' | 'text';
+  logo_type: "image" | "text";
   logo_image?: string;
   logo_text?: string;
   logo_slogan?: string;
@@ -140,7 +140,7 @@ export interface Slide {
 
 export interface HomeSettings {
   main_title: string;
-  main_subtitle: string;
+  main_subtitle?: string;
   show_social_in_hero: boolean;
   slides: Slide[];
 }
@@ -159,17 +159,17 @@ export interface AboutSettings {
   custom_content?: string;
 }
 
-export type SettingsSection =
-    | 'general'
-    | 'logo'
-    | 'home'
-    | 'gallery'
-    | 'about';
+export type SettingsSection = "general" | "logo" | "home" | "gallery" | "about";
 
 export interface SiteSettings {
   id: number;
   section: SettingsSection;
-  settings: GeneralSettings | LogoSettings | HomeSettings | GallerySettings | AboutSettings;
+  settings:
+    | GeneralSettings
+    | LogoSettings
+    | HomeSettings
+    | GallerySettings
+    | AboutSettings;
   is_active: boolean;
   created_at: Date;
   updated_at: Date;

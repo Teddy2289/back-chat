@@ -1,24 +1,3 @@
-//SQL DB
-
-CREATE TABLE site_settings (
-id INT PRIMARY KEY AUTO_INCREMENT,
-section VARCHAR(50) NOT NULL UNIQUE,
-settings JSON NOT NULL,
-is_active BOOLEAN DEFAULT TRUE,
-created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-
-CREATE TABLE models (
-id INT PRIMARY KEY AUTO_INCREMENT,
-prenom VARCHAR(100) NOT NULL,
-age INT,
-nationalite VARCHAR(100) NOT NULL,
-passe_temps TEXT,
-citation TEXT,
-domicile VARCHAR(200),
-localisation VARCHAR(200),
-photo VARCHAR(500), -- URL ou chemin de la photo
-created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
+1 - npx prisma generate
+2 - npx prisma migrate dev --name nom_de_votre_migration
+3 - npx prisma db push

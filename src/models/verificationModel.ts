@@ -1,4 +1,5 @@
-import pool from "../config/database";
+// models/VerificationModel.ts
+import prisma from "../config/prisma";
 import { VerificationToken } from "../types";
 
 export class VerificationModel {
@@ -10,33 +11,39 @@ export class VerificationModel {
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + expiresInHours);
 
-    await pool.execute(
-      "INSERT INTO verification_tokens (user_id, token, expires_at) VALUES (?, ?, ?)",
-      [userId, token, expiresAt]
-    );
+    await prisma.verificationToken.create({
+      data: {
+        user_id: userId,
+        token,
+        expires_at: expiresAt,
+      },
+    });
   }
 
   static async findValidToken(
     userId: number,
     token: string
   ): Promise<VerificationToken | null> {
-    const [rows]: any = await pool.execute(
-      "SELECT * FROM verification_tokens WHERE user_id = ? AND token = ? AND expires_at > NOW()",
-      [userId, token]
-    );
-
-    return rows.length > 0 ? rows[0] : null;
+    return await prisma.verificationToken.findFirst({
+      where: {
+        user_id: userId,
+        token,
+        expires_at: {
+          gt: new Date(),
+        },
+      },
+    });
   }
 
   static async deleteToken(tokenId: number): Promise<void> {
-    await pool.execute("DELETE FROM verification_tokens WHERE id = ?", [
-      tokenId,
-    ]);
+    await prisma.verificationToken.delete({
+      where: { id: tokenId },
+    });
   }
 
   static async deleteUserTokens(userId: number): Promise<void> {
-    await pool.execute("DELETE FROM verification_tokens WHERE user_id = ?", [
-      userId,
-    ]);
+    await prisma.verificationToken.deleteMany({
+      where: { user_id: userId },
+    });
   }
 }

@@ -1,3 +1,4 @@
+// services/AuthService.ts
 import jwt from "jsonwebtoken";
 import { UserModel } from "../models/userModel";
 import { PasswordUtils } from "../utils/passwordUtils";

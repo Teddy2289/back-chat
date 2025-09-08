@@ -1,4 +1,7 @@
+// controllers/PhotoController.ts
 import { Request, Response } from "express";
+import { createPhotoSchema, updatePhotoSchema } from "../validation/schemas";
+import { handleValidationError, validateRequest } from "../validation/utils";
 import { PhotoService } from "../services/photoService";
 
 export class PhotoController {
@@ -19,13 +22,17 @@ export class PhotoController {
   static async getPhoto(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const result = await PhotoService.getPhoto(parseInt(id));
+      const photoId = parseInt(id);
 
-      if (result.success) {
-        res.status(200).json(result);
-      } else {
-        res.status(404).json(result);
+      if (isNaN(photoId) || photoId <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: "ID photo invalide",
+        });
       }
+
+      const result = await PhotoService.getPhoto(photoId);
+      res.status(result.success ? 200 : 404).json(result);
     } catch (error) {
       console.error("Get photo error:", error);
       res.status(500).json({
@@ -37,23 +44,37 @@ export class PhotoController {
 
   static async createPhoto(req: Request, res: Response) {
     try {
-      // Gérer l'upload de fichier ici (le fichier sera dans req.file si vous utilisez multer)
       const fileUrl = req.file ? `/uploads/${req.file.filename}` : req.body.url;
+      console.log("File URL:", fileUrl);
+      // Gestion des tags
+      let tags: string[] = [];
+      if (req.body.tags) {
+        try {
+          tags =
+            typeof req.body.tags === "string"
+              ? JSON.parse(req.body.tags)
+              : Array.isArray(req.body.tags)
+              ? req.body.tags
+              : [req.body.tags];
+        } catch (e) {
+          tags = [];
+        }
+      }
 
-      const photoData = {
+      const photoData = validateRequest(createPhotoSchema, {
+        ...req.body,
         url: fileUrl,
-        alt: req.body.alt,
-        tags: JSON.parse(req.body.tags || "[]"),
-      };
+        tags,
+      });
 
       const result = await PhotoService.createPhoto(photoData);
-
-      if (result.success) {
-        res.status(201).json(result);
-      } else {
-        res.status(400).json(result);
-      }
+      res.status(result.success ? 201 : 400).json(result);
     } catch (error) {
+      const validationError = handleValidationError(error);
+      if (!validationError.success) {
+        return res.status(400).json(validationError);
+      }
+
       console.error("Create photo error:", error);
       res.status(500).json({
         success: false,
@@ -65,26 +86,44 @@ export class PhotoController {
   static async updatePhoto(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const updateData = { ...req.body };
+      const photoId = parseInt(id);
 
-      // Si des tags sont fournis, les parser
-      if (updateData.tags) {
-        updateData.tags = JSON.parse(updateData.tags);
+      if (isNaN(photoId) || photoId <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: "ID photo invalide",
+        });
       }
 
-      // Gérer l'upload de fichier si fourni
+      const updateData: any = { ...req.body };
+
+      // Gestion du fichier
       if (req.file) {
         updateData.url = `/uploads/${req.file.filename}`;
       }
 
-      const result = await PhotoService.updatePhoto(parseInt(id), updateData);
-
-      if (result.success) {
-        res.status(200).json(result);
-      } else {
-        res.status(400).json(result);
+      // Gestion des tags
+      if (updateData.tags) {
+        try {
+          updateData.tags =
+            typeof updateData.tags === "string"
+              ? JSON.parse(updateData.tags)
+              : updateData.tags;
+        } catch (e) {
+          // Garder les tags tels quels si le parsing échoue
+        }
       }
+
+      const validatedData = validateRequest(updatePhotoSchema, updateData);
+      const result = await PhotoService.updatePhoto(photoId, validatedData);
+
+      res.status(result.success ? 200 : 400).json(result);
     } catch (error) {
+      const validationError = handleValidationError(error);
+      if (!validationError.success) {
+        return res.status(400).json(validationError);
+      }
+
       console.error("Update photo error:", error);
       res.status(500).json({
         success: false,
@@ -96,13 +135,17 @@ export class PhotoController {
   static async deletePhoto(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const result = await PhotoService.deletePhoto(parseInt(id));
+      const photoId = parseInt(id);
 
-      if (result.success) {
-        res.status(200).json(result);
-      } else {
-        res.status(404).json(result);
+      if (isNaN(photoId) || photoId <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: "ID photo invalide",
+        });
       }
+
+      const result = await PhotoService.deletePhoto(photoId);
+      res.status(result.success ? 200 : 404).json(result);
     } catch (error) {
       console.error("Delete photo error:", error);
       res.status(500).json({
@@ -115,13 +158,17 @@ export class PhotoController {
   static async likePhoto(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const result = await PhotoService.likePhoto(parseInt(id));
+      const photoId = parseInt(id);
 
-      if (result.success) {
-        res.status(200).json(result);
-      } else {
-        res.status(404).json(result);
+      if (isNaN(photoId) || photoId <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: "ID photo invalide",
+        });
       }
+
+      const result = await PhotoService.likePhoto(photoId);
+      res.status(result.success ? 200 : 404).json(result);
     } catch (error) {
       console.error("Like photo error:", error);
       res.status(500).json({

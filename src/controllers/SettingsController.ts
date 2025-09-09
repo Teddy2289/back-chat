@@ -1,6 +1,6 @@
-import { Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 import { SettingsService } from "../services/SettingsService";
-import { SettingsSection } from "../types";
+import { GeneralSettings, SettingsSection } from "../types";
 
 export class SettingsController {
   /**
@@ -82,19 +82,34 @@ export class SettingsController {
   /**
    * Met à jour les paramètres généraux
    */
-  static async updateGeneralSettings(req: Request, res: Response) {
+  static updateGeneralSettings = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
-      const settings = await SettingsService.updateGeneralSettings(req.body);
-      res.json({
-        success: true,
-        message: "Paramètres généraux mis à jour",
-        data: settings,
-      });
+      const settings: GeneralSettings = req.body;
+      const updatedSettings = await SettingsService.updateGeneralSettings(
+        settings
+      );
+      res.json(updatedSettings);
     } catch (error) {
-      console.error("Update general settings error:", error);
-      this.handleSettingsError(error, res, "généraux");
+      next(error);
     }
-  }
+  };
+
+  static getAssociatedModel = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const model = await SettingsService.getAssociatedModel();
+      res.json({ model });
+    } catch (error) {
+      next(error);
+    }
+  };
 
   /**
    * Met à jour les paramètres du logo
@@ -116,9 +131,23 @@ export class SettingsController {
   /**
    * Met à jour les paramètres de la page d'accueil
    */
+  // Dans votre contrôleur
   static async updateHomeSettings(req: Request, res: Response) {
     try {
-      const settings = await SettingsService.updateHomeSettings(req.body);
+      // Traiter les fichiers uploadés séparément
+      const slides = req.body.slides.map((slide: any) => {
+        return {
+          ...slide,
+          // Ne stocker que le nom du fichier ou l'URL, pas l'image en base64
+          image: slide.imageFileName, // ou l'URL après upload
+        };
+      });
+
+      const settings = await SettingsService.updateHomeSettings({
+        ...req.body,
+        slides,
+      });
+
       res.json({
         success: true,
         message: "Paramètres de l'accueil mis à jour",

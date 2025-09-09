@@ -75,70 +75,112 @@ export class SettingsModel {
     return result !== null;
   }
 
+  // models/SettingsModel.ts
   static async initializeDefaultSettings(): Promise<void> {
-    const count = await prisma.siteSettings.count();
+    const sections: SettingsSection[] = [
+      "general",
+      "logo",
+      "home",
+      "gallery",
+      "about",
+    ];
 
-    if (count === 0) {
-      const defaultSettings = [
-        {
-          section: "general" as SettingsSection,
-          settings: {
-            site_title: "Mon Site",
-            site_subtitle: "Sous-titre du site",
-            social_title: "Suivez-nous",
-            facebook_url: "",
-            twitter_url: "",
-            instagram_url: "",
-            linkedin_url: "",
-            youtube_url: "",
-          },
-          is_active: true,
-        },
-        {
-          section: "logo" as SettingsSection,
-          settings: {
-            logo_type: "image",
-            logo_image: "",
-            logo_text: "Mon Site",
-            logo_slogan: "Sous-titre du site",
-          },
-          is_active: true,
-        },
-        {
-          section: "home" as SettingsSection, // ✅ Corrigé
-          settings: {
-            main_title: "Bienvenue sur notre site",
-            main_subtitle: "Découvrez notre univers",
-            show_social_in_hero: true,
-            slides: [],
-          },
-          is_active: true,
-        },
-        {
-          section: "gallery" as SettingsSection, // ✅ Corrigé
-          settings: {
-            gallery_title: "Notre Galerie",
-            gallery_subtitle: "Découvrez nos photos",
-            show_gallery: true,
-            items_per_page: 12,
-          },
-          is_active: true,
-        },
-        {
-          section: "about" as SettingsSection, // ✅ Corrigé
-          settings: {
-            about_title: "À propos de nous",
-            selected_model_id: null,
-            show_custom_content: false,
-            custom_content: "",
-          },
-          is_active: true,
-        },
-      ];
+    for (const section of sections) {
+      const exists = await this.sectionExists(section);
 
-      for (const setting of defaultSettings) {
+      if (!exists) {
+        console.log(
+          `Création des paramètres par défaut pour la section: ${section}`
+        );
+
+        let defaultSettings: any;
+
+        switch (section) {
+          case "general":
+            defaultSettings = {
+              site_title: "Mon Site",
+              site_subtitle: "Sous-titre du site",
+              associated_model_id: null,
+              show_navbar: true,
+              social_title: "Suivez-nous",
+              social_links: [
+                {
+                  platform: "facebook",
+                  url: "",
+                  icon: "fa-facebook",
+                  is_active: false,
+                },
+                {
+                  platform: "twitter",
+                  url: "",
+                  icon: "fa-twitter",
+                  is_active: false,
+                },
+                {
+                  platform: "instagram",
+                  url: "",
+                  icon: "fa-instagram",
+                  is_active: false,
+                },
+                {
+                  platform: "linkedin",
+                  url: "",
+                  icon: "fa-linkedin",
+                  is_active: false,
+                },
+                {
+                  platform: "youtube",
+                  url: "",
+                  icon: "fa-youtube",
+                  is_active: false,
+                },
+              ],
+            };
+            break;
+
+          case "logo":
+            defaultSettings = {
+              logo_type: "image",
+              logo_image: "",
+              logo_text: "Mon Site",
+              logo_slogan: "Sous-titre du site",
+            };
+            break;
+
+          case "home":
+            defaultSettings = {
+              main_title: "Bienvenue sur notre site",
+              main_subtitle: "Découvrez notre univers",
+              show_social_in_hero: true,
+              slides: [],
+            };
+            break;
+
+          case "gallery":
+            defaultSettings = {
+              gallery_title: "Notre Galerie",
+              gallery_subtitle: "Découvrez nos photos",
+              show_gallery: true,
+              items_per_page: 12,
+            };
+            break;
+
+          case "about":
+            defaultSettings = {
+              about_title: "À propos de nous",
+              selected_model_id: null,
+              show_custom_content: false,
+              custom_content: "",
+            };
+            break;
+        }
+
         await prisma.siteSettings.create({
-          data: setting,
+          data: {
+            section,
+            settings: defaultSettings,
+            is_active: true,
+          },
         });
       }
     }

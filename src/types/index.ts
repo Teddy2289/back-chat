@@ -114,13 +114,19 @@ export interface UpdateModelRequest {
 
 export interface GeneralSettings {
   site_title: string;
-  site_subtitle: string;
-  social_title: string;
-  facebook_url?: string;
-  twitter_url?: string;
-  instagram_url?: string;
-  linkedin_url?: string;
-  youtube_url?: string;
+  site_subtitle?: string;
+  associated_model_id?: number;
+  show_navbar: boolean;
+  social_title?: string;
+  social_links: SocialLink[];
+}
+
+// ✅ Nouveau type pour les liens sociaux
+export interface SocialLink {
+  platform: string; // 'facebook', 'twitter', 'instagram', etc.
+  url: string;
+  icon: string; // nom de l'icône (ex: 'fa-facebook', 'mdi-twitter')
+  is_active: boolean;
 }
 
 export interface LogoSettings {

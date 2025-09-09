@@ -12,22 +12,24 @@ dotenv.config();
 
 const app = express();
 
-// Middleware
-
+// Middleware - ⚠️ CORRIGER L'ORDRE ICI
 app.use(cors());
 app.use(morgan("combined"));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+
+// ⚠️ SUPPRIMER les appels à express.json() et bodyParser.json() dupliqués
+// ⚠️ UTILISER UNIQUEMENT celui avec la limite augmentée :
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/photos", photoRoutes);
 app.use("/api/users", userRoutes);
-app.use("/api/models",modelRoutes);
+app.use("/api/models", modelRoutes);
 app.use("/api/settings", settingsRoutes);
 
-
 app.use("/uploads", express.static("uploads"));
+
 // Route de santé
 app.get("/health", (req: Request, res: Response) => {
   res.status(200).json({ status: "OK", message: "Serveur en fonctionnement" });

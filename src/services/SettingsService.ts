@@ -66,10 +66,42 @@ export class SettingsService {
     settings: GeneralSettings
   ): Promise<SiteSettings> {
     try {
+      // ✅ Validation du modèle associé
+      if (settings.associated_model_id) {
+        const model = await ModelService.findById(settings.associated_model_id);
+        if (!model) {
+          throw new Error("Le modèle associé n'existe pas");
+        }
+      }
+
+      // ✅ Validation des liens sociaux
+      if (settings.social_links) {
+        for (const link of settings.social_links) {
+          if (link.is_active && !link.url) {
+            throw new Error(`L'URL pour ${link.platform} est requise`);
+          }
+        }
+      }
+
       return await SettingsModel.upsert("general", settings);
     } catch (error) {
       console.error("Error updating general settings:", error);
       throw new Error("Erreur lors de la mise à jour des paramètres généraux");
+    }
+  }
+
+  static async getAssociatedModel(): Promise<any> {
+    try {
+      const generalSettings = await SettingsModel.findBySection("general");
+      if (!generalSettings) return null;
+
+      const settings = generalSettings.settings as GeneralSettings;
+      if (!settings.associated_model_id) return null;
+
+      return await ModelService.findById(settings.associated_model_id);
+    } catch (error) {
+      console.error("Error getting associated model:", error);
+      return null;
     }
   }
 
@@ -225,7 +257,32 @@ export class SettingsService {
             }
 
             result.about = frontendAbout;
+          } else if (setting.section === "general") {
+            const generalSettings = setting.settings as GeneralSettings;
+            const frontendGeneral: any = {
+              site_title: generalSettings.site_title,
+              site_subtitle: generalSettings.site_subtitle,
+              show_navbar: generalSettings.show_navbar,
+              social_title: generalSettings.social_title || "Suivez-nous",
+              // ✅ garder seulement les réseaux actifs et valides
+              social_links: (generalSettings.social_links || []).filter(
+                (link) => link.is_active && link.url
+              ),
+            };
+
+            if (generalSettings.associated_model_id) {
+              const model = await ModelService.findById(
+                generalSettings.associated_model_id
+              );
+              if (model) {
+                // ⚡️ On met directement le model complet
+                frontendGeneral.model = model;
+              }
+            }
+
+            result.general = frontendGeneral;
           } else {
+            // autres sections : on renvoie tel quel
             result[setting.section] = setting.settings;
           }
         }
@@ -305,8 +362,6 @@ export class SettingsService {
           logo_type: "text",
           logo_text: "Mon Site",
           logo_image: undefined,
-          inline_size: 150,
-          logo_height: 50,
         };
         await SettingsModel.upsert("logo", defaultLogoSettings, true);
         console.log("Section logo initialisée avec les paramètres par défaut");

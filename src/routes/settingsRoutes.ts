@@ -29,6 +29,14 @@ router.put(
   requireAdmin,
   SettingsController.updateGeneralSettings
 );
+
+router.get(
+  "/general/associated-model",
+  authenticateToken,
+  requireAdmin,
+  SettingsController.getAssociatedModel
+);
+
 router.put(
   "/logo",
   authenticateToken,

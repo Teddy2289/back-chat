@@ -7,17 +7,16 @@ import photoRoutes from "./routes/photoRoutes";
 import userRoutes from "./routes/userRoutes";
 import modelRoutes from "./routes/modelRoutes";
 import settingsRoutes from "./routes/settingsRoutes";
+import categorieRoutes from "./routes/categorieRoutes";
 
 dotenv.config();
 
 const app = express();
 
-// Middleware - ⚠️ CORRIGER L'ORDRE ICI
+// Middleware - ⚠️
 app.use(cors());
 app.use(morgan("combined"));
 
-// ⚠️ SUPPRIMER les appels à express.json() et bodyParser.json() dupliqués
-// ⚠️ UTILISER UNIQUEMENT celui avec la limite augmentée :
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
@@ -27,6 +26,7 @@ app.use("/api/photos", photoRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/models", modelRoutes);
 app.use("/api/settings", settingsRoutes);
+app.use("/api/categories", categorieRoutes);
 
 app.use("/uploads", express.static("uploads"));
 

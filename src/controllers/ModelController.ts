@@ -70,10 +70,22 @@ export class ModelController {
       const modelDataRaw = validateRequest(createModelSchema, req);
       const photoFile = req.file as Express.Multer.File | undefined;
 
+      let categoryIds: number[] | undefined;
+      if (req.body.categoryIds) {
+        try {
+          categoryIds =
+            typeof req.body.categoryIds === "string"
+              ? JSON.parse(req.body.categoryIds)
+              : req.body.categoryIds;
+        } catch (e) {
+          categoryIds = undefined;
+        }
+      }
       // Ensure age is a number (not undefined)
       const modelData = {
         ...modelDataRaw,
-        age: typeof modelDataRaw.age === "number" ? modelDataRaw.age : 0, // or set a default value
+        age: typeof modelDataRaw.age === "number" ? modelDataRaw.age : 0,
+        categoryIds: categoryIds,
       };
 
       const model = await ModelService.create(modelData, photoFile);
@@ -124,16 +136,26 @@ export class ModelController {
       const photoFile = req.file as Express.Multer.File | undefined;
 
       // Ensure age is a number or undefined
+      let categoryIds: number[] | undefined;
+      if (req.body.categoryIds) {
+        try {
+          categoryIds =
+            typeof req.body.categoryIds === "string"
+              ? JSON.parse(req.body.categoryIds)
+              : req.body.categoryIds;
+        } catch (e) {
+          categoryIds = undefined;
+        }
+      }
+
       const modelData = {
         ...modelDataRaw,
         age:
           typeof modelDataRaw.age === "string"
-            ? modelDataRaw.age === ""
-              ? undefined
-              : Number(modelDataRaw.age)
+            ? Number(modelDataRaw.age)
             : modelDataRaw.age,
+        categoryIds: categoryIds, // Ajouter ici aussi
       };
-
       const model = await ModelService.update(modelId, modelData, photoFile);
       res.status(200).json({
         success: true,
@@ -227,6 +249,36 @@ export class ModelController {
       res.status(500).json({
         success: false,
         message: "Erreur lors de la recherche des modèles",
+      });
+    }
+  }
+
+  // controllers/ModelController.ts - Ajoutez cette méthode
+  static async getModelsByCategory(req: Request, res: Response) {
+    try {
+      const { categoryId } = req.params;
+      const id = parseInt(categoryId);
+
+      if (isNaN(id) || id <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: "ID catégorie invalide",
+        });
+      }
+
+      const models = await ModelService.filterByCategory(id);
+
+      res.status(200).json({
+        success: true,
+        message: "Modèles filtrés par catégorie avec succès",
+        data: models,
+        count: models.length,
+      });
+    } catch (error) {
+      console.error("Get models by category error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Erreur lors du filtrage des modèles par catégorie",
       });
     }
   }

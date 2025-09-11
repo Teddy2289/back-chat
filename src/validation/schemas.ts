@@ -77,6 +77,7 @@ export const createModelSchema = z.object({
   domicile: z.string().min(1, "Le domicile est requis"),
   photo: z.string().optional(),
   localisation: z.string().min(1, "La localisation est requise"),
+  categoryIds: z.array(z.number()).optional().nullable(),
 });
 
 export const updateModelSchema = z.object({

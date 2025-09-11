@@ -41,6 +41,18 @@ model VerificationToken {
   @@map("verification_tokens")
 }
 
+model Photo {
+  id         Int      @id @default(autoincrement())
+  url        String
+  alt        String
+  tags       Json
+  likes      Int      @default(0)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("photos")
+}
+
 model Model {
   id           Int      @id @default(autoincrement())
   prenom       String
@@ -54,19 +66,35 @@ model Model {
   created_at   DateTime @default(now())
   updated_at   DateTime @updatedAt
 
+  categories ModelCategorie[]
+
   @@map("models")
 }
 
-model Photo {
-  id         Int      @id @default(autoincrement())
-  url        String
-  alt        String
-  tags       Json
-  likes      Int      @default(0)
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+model Categorie {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  slug        String   @unique
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
 
-  @@map("photos")
+  models ModelCategorie[] // lien avec pivot
+}
+
+model ModelCategorie {
+  id          Int      @id @default(autoincrement())
+  modelId     Int
+  categorieId Int
+  created_at  DateTime @default(now())
+
+  // Relations
+  model     Model     @relation(fields: [modelId], references: [id])
+  categorie Categorie @relation(fields: [categorieId], references: [id])
+
+  @@unique([modelId, categorieId])
+  @@map("model_categories")
 }
 
 model SiteSettings {

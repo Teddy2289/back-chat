@@ -180,3 +180,81 @@ export interface SiteSettings {
   created_at: Date;
   updated_at: Date;
 }
+
+export interface Categorie {
+  id: number;
+  name: string;
+  description?: string;
+  slug: string;
+  is_active: boolean;
+  created_at: Date;
+  updated_at: Date;
+  models?: ModelCategorie[];
+}
+
+export interface CreateCategorieRequest {
+  name: string;
+  description?: string;
+  slug: string;
+  is_active?: boolean;
+}
+
+export interface UpdateCategorieRequest {
+  name?: string;
+  description?: string;
+  slug?: string;
+  is_active?: boolean;
+}
+
+export interface Model {
+  id: number;
+  prenom: string;
+  age: number;
+  nationalite: string;
+  passe_temps: string;
+  citation: string;
+  domicile: string;
+  photo?: string;
+  localisation: string;
+  created_at: Date;
+  updated_at: Date;
+  categories?: ModelCategorie[];
+}
+
+export interface CreateModelRequest {
+  prenom: string;
+  age: number;
+  nationalite: string;
+  passe_temps: string;
+  citation: string;
+  domicile: string;
+  photo?: string;
+  localisation: string;
+  categoryIds?: number[]; // IDs des catégories
+}
+
+export interface UpdateModelRequest {
+  prenom?: string;
+  age?: number;
+  nationalite?: string;
+  passe_temps?: string;
+  citation?: string;
+  domicile?: string;
+  photo?: string;
+  localisation?: string;
+  categoryIds?: number[]; // IDs des catégories
+}
+
+export interface ModelCategorie {
+  id: number;
+  modelId: number;
+  categorieId: number;
+  created_at: Date;
+  model?: Model; // optionnel si tu veux inclure le model
+  categorie?: Categorie; // optionnel si tu veux inclure la catégorie
+}
+
+export interface CreateModelCategorieRequest {
+  modelId: number;
+  categorieId: number;
+}

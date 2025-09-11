@@ -202,4 +202,24 @@ export class ModelService {
   private static getFullPath(relativePath: string): string {
     return path.join(process.cwd(), relativePath);
   }
+
+  static async getModelsByCategory(categoryId: number): Promise<Model[]> {
+    try {
+      return await ModelModel.getModelsByCategory(categoryId);
+    } catch (error) {
+      console.error("Error fetching models by category:", error);
+      throw new Error(
+        "Erreur lors de la récupération des modèles par catégorie"
+      );
+    }
+  }
+  // services/ModelService.ts - Ajoutez cette méthode
+  static async filterByCategory(categoryId: number): Promise<Model[]> {
+    try {
+      return await ModelModel.getModelsByCategory(categoryId);
+    } catch (error) {
+      console.error("Error filtering models by category:", error);
+      throw new Error("Erreur lors du filtrage des modèles par catégorie");
+    }
+  }
 }

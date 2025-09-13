@@ -67,28 +67,13 @@ export class ModelController {
 
   static async createModel(req: Request, res: Response) {
     try {
-      const modelDataRaw = validateRequest(createModelSchema, req);
+      // Zod gère maintenant la conversion, plus besoin de parser manuellement
+      const modelData = validateRequest(createModelSchema, req);
       const photoFile = req.file as Express.Multer.File | undefined;
 
-      let categoryIds: number[] | undefined;
-      if (req.body.categoryIds) {
-        try {
-          categoryIds =
-            typeof req.body.categoryIds === "string"
-              ? JSON.parse(req.body.categoryIds)
-              : req.body.categoryIds;
-        } catch (e) {
-          categoryIds = undefined;
-        }
-      }
-      // Ensure age is a number (not undefined)
-      const modelData = {
-        ...modelDataRaw,
-        age: typeof modelDataRaw.age === "number" ? modelDataRaw.age : 0,
-        categoryIds: categoryIds,
-      };
-
+      // modelData.categoryIds est maintenant déjà un tableau de nombres (ou undefined)
       const model = await ModelService.create(modelData, photoFile);
+
       res.status(201).json({
         success: true,
         message: "Modèle créé avec succès",

@@ -61,15 +61,15 @@ export const userSearchSchema = z.object({
 export const createModelSchema = z.object({
   prenom: z.string().min(1, "Le prénom est requis"),
   age: z
-    .string()
-    .optional()
-    .transform((val) => (val !== undefined ? Number(val) : undefined))
-    .refine(
-      (val) => val === undefined || (!isNaN(val) && val >= 0 && val <= 150),
-      {
-        message: "L'âge doit être compris entre 0 et 150",
-      }
-    ),
+      .string()
+      .optional()
+      .transform((val) => (val !== undefined ? Number(val) : undefined))
+      .refine(
+          (val) => val === undefined || (!isNaN(val) && val >= 0 && val <= 150),
+          {
+            message: "L'âge doit être compris entre 0 et 150",
+          }
+      ),
 
   nationalite: z.string().min(1, "La nationalité est requise"),
   passe_temps: z.string().min(1, "Le passe-temps est requis"),
@@ -77,9 +77,23 @@ export const createModelSchema = z.object({
   domicile: z.string().min(1, "Le domicile est requis"),
   photo: z.string().optional(),
   localisation: z.string().min(1, "La localisation est requise"),
-  categoryIds: z.array(z.number()).optional().nullable(),
-});
 
+  // 👇 LA MODIFICATION EST ICI
+  // On transforme chaque élément du tableau de string en number.
+  categoryIds: z.preprocess(
+      (val) => {
+        if (Array.isArray(val)) {
+          return val.map(v => typeof v === 'string' ? parseInt(v, 10) : v).filter(v => !isNaN(v));
+        }
+        if (typeof val === 'string') {
+          const parsed = parseInt(val, 10);
+          return isNaN(parsed) ? [] : [parsed];
+        }
+        return val;
+      },
+      z.array(z.number()).optional().nullable()
+  )
+});
 export const updateModelSchema = z.object({
   prenom: z.string().min(1, "Le prénom est requis").optional(),
   nationalite: z.string().optional(),

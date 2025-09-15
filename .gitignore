@@ -48,3 +48,5 @@ Thumbs.db
 *.swo
 *~
 /src/generated/prisma
+
+/uploads/*

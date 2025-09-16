@@ -1,8 +1,11 @@
+// routes/chatRoutes.ts
 import { Router } from "express";
-import { chatWithAI } from "../controllers/aiController";
+import { authenticateToken } from "../middleware/auth";
+import { aiController } from "../controllers/aiController";
 
 const router = Router();
 
-router.post("/chat", chatWithAI);
+router.post("/chat", authenticateToken, aiController.chatWithAI);
+router.get("/:conversationId/messages", aiController.getConversationMessages);
 
 export default router;

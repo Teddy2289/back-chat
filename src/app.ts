@@ -8,7 +8,10 @@ import userRoutes from "./routes/userRoutes";
 import modelRoutes from "./routes/modelRoutes";
 import settingsRoutes from "./routes/settingsRoutes";
 import categorieRoutes from "./routes/categorieRoutes";
-import aiRoutes from "./routes/aiRoutes"; // ← Ajoutez cette importation
+import aiRoutes from "./routes/aiRoutes";
+import paiementRoutes from "./routes/paymentRoutes";
+import conversationRoutes from "./routes/conversationRoutes";
+import clientRoutes from "./routes/clientRoutes";
 
 dotenv.config();
 
@@ -27,7 +30,10 @@ app.use("/api/users", userRoutes);
 app.use("/api/models", modelRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/categories", categorieRoutes);
-app.use("/api/ai", aiRoutes); // ← Ajoutez cette ligne
+app.use("/api/ai", aiRoutes);
+app.use("/api/payments", paiementRoutes);
+app.use("/api/conversations", conversationRoutes);
+app.use("/api/clients", clientRoutes);
 
 app.use("/uploads", express.static("uploads"));
 
@@ -36,7 +42,7 @@ app.get("/health", (req: Request, res: Response) => {
   res.status(200).json({
     status: "OK",
     message: "Serveur en fonctionnement",
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 });
 
@@ -70,7 +76,7 @@ app.use((error: any, req: Request, res: Response, next: NextFunction) => {
   res.status(500).json({
     success: false,
     message: "Erreur interne du serveur",
-    error: process.env.NODE_ENV === "development" ? error.message : undefined
+    error: process.env.NODE_ENV === "development" ? error.message : undefined,
   });
 });
 

@@ -19,6 +19,10 @@ model User {
   created_at          DateTime            @default(now())
   updated_at          DateTime            @updatedAt
   verification_tokens VerificationToken[]
+  ModelModerator      ModelModerator[]
+  Conversation        Conversation[]
+  Message             Message[]
+  Payment             Payment[]
 
   @@map("users")
 }
@@ -66,7 +70,9 @@ model Model {
   created_at   DateTime @default(now())
   updated_at   DateTime @updatedAt
 
-  categories ModelCategorie[]
+  categories     ModelCategorie[]
+  ModelModerator ModelModerator[]
+  Conversation   Conversation[]
 
   @@map("models")
 }
@@ -107,4 +113,89 @@ model SiteSettings {
 
   @@unique([section])
   @@map("site_settings")
+}
+
+model ModelModerator {
+  id      Int @id @default(autoincrement())
+  modelId Int
+  userId  Int
+
+  model Model @relation(fields: [modelId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+
+  created_at DateTime @default(now())
+
+  @@unique([modelId, userId])
+  @@map("model_moderators")
+}
+
+model Conversation {
+  id       Int    @id @default(autoincrement())
+  modelId  Int
+  clientId Int
+  status   String @default("active")
+
+  model         Model     @relation(fields: [modelId], references: [id])
+  client        User      @relation(fields: [clientId], references: [id])
+  messages      Message[]
+  is_premium    Boolean   @default(false)
+  paymentId     Int?
+  payment       Payment?  @relation(fields: [paymentId], references: [id])
+  message_count Int       @default(0)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("conversations")
+}
+
+model Message {
+  id             Int     @id @default(autoincrement())
+  conversationId Int
+  senderId       Int
+  isFromModel    Boolean @default(false)
+  content        String
+
+  conversation Conversation @relation(fields: [conversationId], references: [id])
+  sender       User         @relation(fields: [senderId], references: [id])
+
+  created_at DateTime @default(now())
+
+  @@map("messages")
+}
+
+model PaymentPlan {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  price       Float
+  duration    Int // Durée en jours
+  credits     Int // Nombre de messages inclus
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  payments Payment[]
+
+  @@map("payment_plans")
+}
+
+model Payment {
+  id           Int       @id @default(autoincrement())
+  userId       Int
+  planId       Int
+  stripeId     String    @unique
+  amount       Float
+  status       String    @default("pending") // pending, completed, failed
+  credits      Int
+  credits_used Int       @default(0)
+  expires_at   DateTime?
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
+
+  user         User           @relation(fields: [userId], references: [id])
+  plan         PaymentPlan    @relation(fields: [planId], references: [id])
+  Conversation Conversation[]
+
+  @@map("payments")
 }

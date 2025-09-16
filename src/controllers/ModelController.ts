@@ -106,7 +106,6 @@ export class ModelController {
 
   static async updateModel(req: Request, res: Response) {
     try {
-      console.log(req.body);
       const { id } = req.params;
       const modelId = parseInt(id);
 
@@ -117,31 +116,12 @@ export class ModelController {
         });
       }
 
-      const modelDataRaw = validateRequest(updateModelSchema, req);
+      // Zod gère maintenant la conversion (comme dans createModel)
+      const modelData = validateRequest(updateModelSchema, req);
       const photoFile = req.file as Express.Multer.File | undefined;
 
-      // Ensure age is a number or undefined
-      let categoryIds: number[] | undefined;
-      if (req.body.categoryIds) {
-        try {
-          categoryIds =
-            typeof req.body.categoryIds === "string"
-              ? JSON.parse(req.body.categoryIds)
-              : req.body.categoryIds;
-        } catch (e) {
-          categoryIds = undefined;
-        }
-      }
-
-      const modelData = {
-        ...modelDataRaw,
-        age:
-          typeof modelDataRaw.age === "string"
-            ? Number(modelDataRaw.age)
-            : modelDataRaw.age,
-        categoryIds: categoryIds, // Ajouter ici aussi
-      };
       const model = await ModelService.update(modelId, modelData, photoFile);
+
       res.status(200).json({
         success: true,
         message: "Modèle mis à jour avec succès",
@@ -150,6 +130,10 @@ export class ModelController {
     } catch (error) {
       const validationError = handleValidationError(error);
       if (!validationError.success) {
+        // Nettoyer le fichier en cas d'erreur de validation (optionnel, comme dans createModel)
+        if (req.file) {
+          // Appeler ton service de suppression de fichier si nécessaire
+        }
         return res.status(400).json(validationError);
       }
 

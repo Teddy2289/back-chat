@@ -1,5 +1,5 @@
-// services/conversationService.ts
 import prisma from "../config/prisma";
+import { paymentService } from "./paymentService";
 
 export interface CreateConversationData {
   clientId: number;
@@ -25,7 +25,8 @@ class ConversationService {
   }
 
   async checkConversationAccess(
-    conversationId: number
+    conversationId: number,
+    userId: number
   ): Promise<ConversationCheckResult> {
     const conversation = await prisma.conversation.findUnique({
       where: { id: conversationId },
@@ -34,6 +35,7 @@ class ConversationService {
           include: { plan: true },
         },
         model: true,
+        client: true,
       },
     });
 
@@ -45,19 +47,42 @@ class ConversationService {
       };
     }
 
+    // Vérifier que l'utilisateur a accès à cette conversation
+    if (conversation.clientId !== userId) {
+      return {
+        canChat: false,
+        isPremium: false,
+        error: "Access denied",
+      };
+    }
+
     // Vérifier l'accès premium
     if (conversation.is_premium && conversation.payment) {
-      const canChatPremium =
-        conversation.payment.status === "completed" &&
+      const now = new Date();
+      const isPaymentValid =
+        conversation.payment.status === "COMPLETED" &&
         conversation.payment.credits_used < conversation.payment.credits &&
-        new Date() < (conversation.payment.expires_at || new Date());
+        (!conversation.payment.expires_at ||
+          now < conversation.payment.expires_at);
 
-      if (canChatPremium) {
+      if (isPaymentValid) {
         return {
           canChat: true,
           isPremium: true,
           conversation,
         };
+      } else if (conversation.payment.status === "PENDING") {
+        // Si le paiement est en attente, vérifier avec Stripe
+        try {
+          const isPaid = await paymentService.verifyPayment(
+            conversation.payment.stripeId
+          );
+          if (isPaid) {
+            return this.checkConversationAccess(conversationId, userId);
+          }
+        } catch (error) {
+          console.error("Error verifying payment:", error);
+        }
       }
     }
 

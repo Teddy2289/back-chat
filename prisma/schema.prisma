@@ -180,22 +180,29 @@ model PaymentPlan {
   @@map("payment_plans")
 }
 
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  EXPIRED
+}
+
 model Payment {
-  id           Int       @id @default(autoincrement())
+  id           Int           @id @default(autoincrement())
   userId       Int
   planId       Int
-  stripeId     String    @unique
+  stripeId     String        @unique
   amount       Float
-  status       String    @default("pending") // pending, completed, failed
+  status       PaymentStatus @default(PENDING)
   credits      Int
-  credits_used Int       @default(0)
+  credits_used Int           @default(0)
   expires_at   DateTime?
-  created_at   DateTime  @default(now())
-  updated_at   DateTime  @updatedAt
+  created_at   DateTime      @default(now())
+  updated_at   DateTime      @updatedAt
 
-  user         User           @relation(fields: [userId], references: [id])
-  plan         PaymentPlan    @relation(fields: [planId], references: [id])
-  Conversation Conversation[]
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan          PaymentPlan    @relation(fields: [planId], references: [id], onDelete: Cascade)
+  conversations Conversation[]
 
   @@map("payments")
 }

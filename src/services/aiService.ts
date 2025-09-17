@@ -24,7 +24,8 @@ class AIService {
 
     // Vérifier l'accès à la conversation et récupérer les données du modèle
     const accessCheck = await conversationService.checkConversationAccess(
-      conversationId
+      conversationId,
+      userId
     );
 
     if (!accessCheck.canChat) {

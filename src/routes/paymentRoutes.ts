@@ -1,25 +1,43 @@
-// routes/paymentRoutes.ts
 import express from "express";
 import {
   createCheckoutSession,
   handleWebhook,
 } from "../controllers/paymentController";
+import {
+  getPaymentPlans,
+  getPaymentPlanById,
+  createPaymentPlan,
+  updatePaymentPlan,
+  deletePaymentPlan,
+} from "../controllers/paymentPlanController";
+import { authenticateToken } from "../middleware/auth";
 import prisma from "../config/prisma";
+import { paymentService } from "../services/paymentService";
 
 const router = express.Router();
 
-// ✅ Créer une session de checkout Stripe
+// Middleware d'authentification pour les routes protégées
+router.use(authenticateToken);
+
+// Routes pour les plans de paiement (Admin)
+router.get("/plans", getPaymentPlans);
+router.get("/plans/:id", getPaymentPlanById);
+router.post("/plans", createPaymentPlan);
+router.put("/plans/:id", updatePaymentPlan);
+router.delete("/plans/:id", deletePaymentPlan);
+
+// Créer une session de checkout Stripe
 router.post("/create-checkout-session", createCheckoutSession);
 
-// ✅ Webhook Stripe (⚠️ express.raw pour le body)
+// Webhook Stripe (sans authentification, traitement brut)
 router.post(
   "/webhook",
   express.raw({ type: "application/json" }),
   handleWebhook
 );
 
-// ✅ Récupérer les plans actifs
-router.get("/plans", async (req, res) => {
+// Récupérer les plans actifs (public)
+router.get("/active-plans", async (req, res) => {
   try {
     const plans = await prisma.paymentPlan.findMany({
       where: { is_active: true },
@@ -32,10 +50,11 @@ router.get("/plans", async (req, res) => {
   }
 });
 
-// ✅ Vérifier le statut d’un paiement
-router.post("/verify", async (req, res) => {
+// Vérifier le statut d'un paiement
+router.post("/verify-payment", async (req, res) => {
   try {
     const { sessionId, conversationId } = req.body;
+    const userId = (req as any).user?.id;
 
     if (!sessionId || !conversationId) {
       return res
@@ -43,27 +62,21 @@ router.post("/verify", async (req, res) => {
         .json({ error: "Session ID and Conversation ID are required" });
     }
 
-    const payment = await prisma.payment.findUnique({
-      where: { stripeId: sessionId },
-      include: { plan: true },
+    // Vérifier que l'utilisateur a accès à cette conversation
+    const conversation = await prisma.conversation.findUnique({
+      where: { id: parseInt(conversationId) },
     });
 
-    if (!payment) {
-      return res.status(404).json({ error: "Payment not found" });
+    if (!conversation || conversation.clientId !== userId) {
+      return res.status(403).json({ error: "Access denied" });
     }
 
-    if (payment.status === "completed") {
-      await prisma.conversation.update({
-        where: { id: parseInt(conversationId) },
-        data: {
-          is_premium: true,
-          paymentId: payment.id,
-        },
-      });
+    const isPaid = await paymentService.verifyPayment(sessionId);
 
+    if (isPaid) {
       return res.json({
         success: true,
-        message: "Payment verified successfully",
+        message: "Payment verified and conversation upgraded to premium",
       });
     } else {
       return res.status(402).json({

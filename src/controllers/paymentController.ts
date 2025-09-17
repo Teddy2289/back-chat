@@ -25,19 +25,24 @@ export const handleWebhook = async (req: Request, res: Response) => {
   let event: Stripe.Event;
 
   try {
+    // Vérifier que le secret webhook est défini
+    if (!process.env.STRIPE_WEBHOOK_SECRET) {
+      throw new Error("STRIPE_WEBHOOK_SECRET is not defined");
+    }
+
+    // Construire l'événement Stripe
     event = stripe.webhooks.constructEvent(
       req.body,
       sig,
-      process.env.STRIPE_WEBHOOK_SECRET!
+      process.env.STRIPE_WEBHOOK_SECRET
     );
-  } catch (err: any) {
-    return res.status(400).send(`Webhook Error: ${err.message}`);
-  }
 
-  try {
+    // Traiter l'événement
     await paymentService.handleWebhookEvent(event);
+
     res.json({ received: true });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message || "Internal server error" });
+  } catch (err: any) {
+    console.error("Webhook Error:", err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 };

@@ -16,3 +16,6 @@ GET /conversations/:id → récupère la conversation
 POST /conversations/:id/increment-message → incrémente le compteur de messages
 
 POST /conversations/increment-premium-credits → incrémente les crédits premium
+
+
+stripe listen --forward-to localhost:3000/api/payments/webhook

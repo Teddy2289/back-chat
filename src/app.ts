@@ -12,6 +12,8 @@ import aiRoutes from "./routes/aiRoutes";
 import paiementRoutes from "./routes/paymentRoutes";
 import conversationRoutes from "./routes/conversationRoutes";
 import clientRoutes from "./routes/clientRoutes";
+import planPaiement from "./routes/paymentRoutes";
+import { handleWebhook } from "./controllers/paymentController";
 
 dotenv.config();
 
@@ -20,6 +22,11 @@ const app = express();
 // Middleware
 app.use(cors());
 app.use(morgan("combined"));
+app.post(
+  "/api/payments/webhook",
+  express.raw({ type: "application/json" }),
+  handleWebhook
+);
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
@@ -34,6 +41,7 @@ app.use("/api/ai", aiRoutes);
 app.use("/api/payments", paiementRoutes);
 app.use("/api/conversations", conversationRoutes);
 app.use("/api/clients", clientRoutes);
+app.use("/api/payments/plans", planPaiement);
 
 app.use("/uploads", express.static("uploads"));
 

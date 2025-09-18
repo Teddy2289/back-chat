@@ -1,13 +1,15 @@
 // models/UserModel.ts
 import prisma from "../config/prisma";
 import { User, UserType, CreateUserRequest, UpdateUserRequest } from "../types";
-
+import bcrypt from "bcrypt";
 export class UserModel {
   static async create(userData: CreateUserRequest): Promise<User> {
+    const hashedPassword = await bcrypt.hash(userData.password, 12);
+
     const user = await prisma.user.create({
       data: {
         email: userData.email,
-        password: userData.password,
+        password: hashedPassword,
         first_name: userData.first_name,
         last_name: userData.last_name,
         type: (userData.type || "User") as any, // Assertion as any
@@ -110,7 +112,7 @@ export class UserModel {
       },
     });
 
-    return users as unknown as User[]; // Assertion ici
+    return users as unknown as User[];
   }
 
   // Les méthodes suivantes n'ont pas besoin de changement

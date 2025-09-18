@@ -9,20 +9,21 @@ datasource db {
 }
 
 model User {
-  id                  Int                 @id @default(autoincrement())
-  email               String              @unique
-  password            String
-  first_name          String
-  last_name           String
-  type                UserType            @default(User)
-  is_verified         Boolean             @default(false)
-  created_at          DateTime            @default(now())
-  updated_at          DateTime            @updatedAt
-  verification_tokens VerificationToken[]
-  ModelModerator      ModelModerator[]
-  Conversation        Conversation[]
-  Message             Message[]
-  Payment             Payment[]
+  id                   Int                    @id @default(autoincrement())
+  email                String                 @unique
+  password             String
+  first_name           String
+  last_name            String
+  type                 UserType               @default(User)
+  is_verified          Boolean                @default(false)
+  created_at           DateTime               @default(now())
+  updated_at           DateTime               @updatedAt
+  verification_tokens  VerificationToken[]
+  ModelModerator       ModelModerator[]
+  Conversation         Conversation[]
+  Message              Message[]
+  Payment              Payment[]
+  FreeMessageAllowance FreeMessageAllowance[]
 
   @@map("users")
 }
@@ -143,18 +144,48 @@ model Conversation {
   payment       Payment?  @relation(fields: [paymentId], references: [id])
   message_count Int       @default(0)
 
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+  created_at           DateTime               @default(now())
+  updated_at           DateTime               @updatedAt
+  FreeMessageAllowance FreeMessageAllowance[]
 
   @@map("conversations")
 }
 
+enum MessageType {
+  TEXT
+  IMAGE
+  VIDEO
+  AUDIO
+  FILE
+}
+
+model FreeMessageAllowance {
+  id             Int          @id @default(autoincrement())
+  userId         Int
+  conversationId Int
+  messagesUsed   Int          @default(0)
+  maxMessages    Int          @default(2)
+  expiresAt      DateTime     @default(dbgenerated("DATE_ADD(NOW(), INTERVAL 7 DAY)"))
+  user           User         @relation(fields: [userId], references: [id])
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, conversationId])
+  @@map("free_message_allowances")
+}
+
 model Message {
-  id             Int     @id @default(autoincrement())
+  id             Int         @id @default(autoincrement())
   conversationId Int
   senderId       Int
-  isFromModel    Boolean @default(false)
+  isFromModel    Boolean     @default(false)
   content        String
+  type           MessageType @default(TEXT)
+  fileUrl        String? // Pour le stockage des fichiers
+  fileName       String? // Nom original du fichier
+  fileSize       Int? // Taille en bytes
 
   conversation Conversation @relation(fields: [conversationId], references: [id])
   sender       User         @relation(fields: [senderId], references: [id])

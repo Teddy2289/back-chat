@@ -155,6 +155,7 @@ export class AuthService {
     try {
       // Trouver l'utilisateur par email
       const user = await UserModel.findByEmail(loginData.email);
+      console.log(user);
       if (!user) {
         return {
           success: false,
@@ -167,7 +168,7 @@ export class AuthService {
         loginData.password,
         user.password
       );
-
+      console.log(isPasswordValid);
       if (!isPasswordValid) {
         return {
           success: false,

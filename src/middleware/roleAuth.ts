@@ -1,44 +1,21 @@
+// middleware/roleAuth.ts
 import { Request, Response, NextFunction } from "express";
 import { UserType } from "../generated/prisma";
 
-// Définissez une interface pour l'utilisateur dans req.user
-interface AuthUser {
-  id: number;
-  email: string;
-  type: UserType;
-  is_verified: boolean;
-  first_name: string;
-  last_name: string;
-  created_at: Date;
-  updated_at: Date;
-}
-
-declare global {
-  namespace Express {
-    interface Request {
-      user?: AuthUser;
-    }
-  }
-}
-
+// Fonction requireRole manquante
 export const requireRole = (allowedRoles: UserType[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
-    const user = req.user;
-
-    if (!user) {
+    if (!req.user) {
       return res.status(401).json({
         success: false,
         message: "Authentification requise",
       });
     }
 
-    // Correction ici : utilisez user.type au lieu de (req as any).userType
-    const userRole = user.type;
-
-    if (!allowedRoles.includes(userRole)) {
+    if (!req.user.type || !allowedRoles.includes(req.user.type)) {
       return res.status(403).json({
         success: false,
-        message: "Permissions insuffisantes",
+        message: "Permissions insuffisantes pour accéder à cette ressource",
       });
     }
 
@@ -46,7 +23,7 @@ export const requireRole = (allowedRoles: UserType[]) => {
   };
 };
 
-// Middlewares spécifiques - CORRIGEZ ces appels
+// Middlewares spécifiques
 export const requireAdmin = requireRole([UserType.Admin]);
 export const requireAgentOrAdmin = requireRole([
   UserType.Admin,
@@ -54,9 +31,33 @@ export const requireAgentOrAdmin = requireRole([
 ]);
 export const requireClient = requireRole([UserType.Client]);
 export const requireUser = requireRole([UserType.User]);
-export const requireAnyUser = requireRole([
-  UserType.Admin,
-  UserType.Agent,
-  UserType.Client,
-  UserType.User,
-]);
+
+// Middleware pour tout utilisateur authentifié
+export const requireAuth = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: "Authentification requise",
+    });
+  }
+  next();
+};
+
+// Vérifie si l'utilisateur est vérifié
+export const requireVerified = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  if (!req.user?.is_verified) {
+    return res.status(403).json({
+      success: false,
+      message: "Votre compte doit être vérifié pour accéder à cette ressource",
+    });
+  }
+  next();
+};

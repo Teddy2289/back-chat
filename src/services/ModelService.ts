@@ -16,7 +16,49 @@ export class ModelService {
       throw new Error("Erreur lors de la récupération des modèles");
     }
   }
+  // services/ModelService.ts
+  static async getModelClients(modelId: number): Promise<Client[]> {
+    try {
+      // Implémentez la logique pour récupérer les clients d'un modèle spécifique
+      // Cela pourrait être une requête Prisma qui joint les conversations et clients
+      const modelWithClients = await prisma.model.findUnique({
+        where: { id: modelId },
+        include: {
+          conversations: {
+            include: {
+              client: {
+                include: {
+                  Conversation: {
+                    include: {
+                      messages: {
+                        orderBy: { created_at: "desc" },
+                        take: 1,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
 
+      if (!modelWithClients) {
+        return [];
+      }
+
+      // Transformer les données pour retourner les clients avec leurs conversations
+      const clients = modelWithClients.conversations.map((conv) => ({
+        ...conv.client,
+        Conversation: conv.client.Conversation, // Inclure toutes les conversations du client
+      }));
+
+      return clients;
+    } catch (error) {
+      console.error("Error fetching model clients:", error);
+      throw new Error("Erreur lors de la récupération des clients du modèle");
+    }
+  }
   /**
    * Récupère un modèle par son ID
    */

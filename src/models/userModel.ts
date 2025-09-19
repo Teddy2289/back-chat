@@ -1,9 +1,11 @@
 // models/UserModel.ts
 import prisma from "../config/prisma";
 import { User, UserType, CreateUserRequest, UpdateUserRequest } from "../types";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs"; // ✅ utiliser bcryptjs partout
+
 export class UserModel {
   static async create(userData: CreateUserRequest): Promise<User> {
+    // ✅ utilisation de bcryptjs
     const hashedPassword = await bcrypt.hash(userData.password, 12);
 
     const user = await prisma.user.create({
@@ -25,7 +27,7 @@ export class UserModel {
       where: { email },
     });
 
-    return user as unknown as User | null; // Assertion ici
+    return user as unknown as User | null;
   }
 
   static async findById(id: number): Promise<User | null> {
@@ -33,7 +35,7 @@ export class UserModel {
       where: { id },
     });
 
-    return user as unknown as User | null; // Assertion ici
+    return user as unknown as User | null;
   }
 
   static async findAll(): Promise<User[]> {
@@ -51,13 +53,13 @@ export class UserModel {
       },
     });
 
-    return users as unknown as User[]; // Assertion ici
+    return users as unknown as User[];
   }
 
   static async update(id: number, userData: UpdateUserRequest): Promise<User> {
     const data: any = { ...userData };
     if (userData.type) {
-      data.type = userData.type as any; // Assertion ici
+      data.type = userData.type as any;
     }
 
     const user = await prisma.user.update({
@@ -65,7 +67,7 @@ export class UserModel {
       data,
     });
 
-    return user as unknown as User; // Assertion ici
+    return user as unknown as User;
   }
 
   static async search(criteria: {
@@ -80,19 +82,15 @@ export class UserModel {
     if (criteria.email) {
       where.email = { contains: criteria.email };
     }
-
     if (criteria.first_name) {
       where.first_name = { contains: criteria.first_name };
     }
-
     if (criteria.last_name) {
       where.last_name = { contains: criteria.last_name };
     }
-
     if (criteria.type) {
-      where.type = criteria.type as any; // Assertion ici
+      where.type = criteria.type as any;
     }
-
     if (criteria.is_verified !== undefined) {
       where.is_verified = criteria.is_verified;
     }
@@ -115,7 +113,6 @@ export class UserModel {
     return users as unknown as User[];
   }
 
-  // Les méthodes suivantes n'ont pas besoin de changement
   static async updateVerificationStatus(
     id: number,
     isVerified: boolean

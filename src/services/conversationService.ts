@@ -13,6 +13,7 @@ export interface ConversationCheckResult {
   remainingFreeMessages?: number;
   error?: string;
   conversation?: any;
+  shouldUseAI?: boolean;
 }
 
 class ConversationService {
@@ -21,6 +22,7 @@ class ConversationService {
       data: {
         clientId: data.clientId,
         modelId: data.modelId,
+        status: "FREE_TRIAL", // Statut initial
       },
     });
 
@@ -48,6 +50,10 @@ class ConversationService {
         model: true,
         client: true,
         FreeMessageAllowance: true,
+        messages: {
+          orderBy: { created_at: "desc" },
+          take: 10,
+        },
       },
     });
 
@@ -59,13 +65,16 @@ class ConversationService {
       };
     }
 
-    // Vérifier l'accès utilisateur
     if (conversation.clientId !== userId) {
-      return { canChat: false, isPremium: false, error: "Access denied" };
+      return {
+        canChat: false,
+        isPremium: false,
+        error: "Access denied: You are not the client of this conversation",
+      };
     }
 
     // Vérifier l'accès premium
-    if (conversation.is_premium && conversation.payment) {
+    if (conversation.status === "PREMIUM" && conversation.payment) {
       const now = new Date();
       const isPaymentValid =
         conversation.payment.status === "COMPLETED" &&
@@ -77,28 +86,28 @@ class ConversationService {
         return {
           canChat: true,
           isPremium: true,
+          shouldUseAI: false,
           conversation,
         };
-      } else if (conversation.payment.status === "PENDING") {
-        // Si le paiement est en attente, vérifier avec Stripe
-        try {
-          const isPaid = await paymentService.verifyPayment(
-            conversation.payment.stripeId
-          );
-          if (isPaid) {
-            return this.checkConversationAccess(conversationId, userId);
-          }
-        } catch (error) {
-          console.error("Error verifying payment:", error);
-        }
+      } else {
+        // Si le paiement n'est plus valide, mettre à jour le statut
+        await prisma.conversation.update({
+          where: { id: conversationId },
+          data: { status: "PAYMENT_REQUIRED" },
+        });
       }
     }
 
     // Vérifier les messages gratuits
     const freeAllowance = conversation.FreeMessageAllowance[0];
-    if (freeAllowance) {
+    if (freeAllowance && conversation.status === "FREE_TRIAL") {
       const now = new Date();
       if (freeAllowance.expiresAt < now) {
+        await prisma.conversation.update({
+          where: { id: conversationId },
+          data: { status: "PAYMENT_REQUIRED" },
+        });
+
         return {
           canChat: false,
           isPremium: false,
@@ -116,20 +125,27 @@ class ConversationService {
         return {
           canChat: true,
           isPremium: false,
+          shouldUseAI: true, // Utiliser Gemini pour les réponses gratuites
           remainingFreeMessages,
           conversation,
         };
+      } else {
+        // Passer en mode paiement requis
+        await prisma.conversation.update({
+          where: { id: conversationId },
+          data: { status: "PAYMENT_REQUIRED" },
+        });
       }
     }
 
+    // Si on arrive ici, c'est que le paiement est requis
     return {
       canChat: false,
       isPremium: false,
-      error: "Payment required",
+      error: "Payment required to continue chatting",
       conversation,
     };
   }
-
   async incrementMessageCount(conversationId: number, userId: number) {
     // Vérifier si on doit utiliser un message gratuit ou premium
     const accessCheck = await this.checkConversationAccess(

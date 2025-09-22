@@ -5,6 +5,11 @@ import {
 } from "./conversationService";
 import { messageService } from "./messageService";
 
+// Configuration Gemini (gratuit)
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+
 export interface ChatMessage {
   role: "user" | "assistant" | "system";
   content: string;
@@ -13,16 +18,14 @@ export interface ChatMessage {
 export interface ChatRequest {
   message: string;
   conversationId: number;
-  history: ChatMessage[];
-  modelData?: any;
-  userId: number; // Ajout de l'userId
+  userId: number;
 }
 
 class AIService {
   async processChatMessage(request: ChatRequest) {
     const { conversationId, message, userId } = request;
 
-    // Vérifier l'accès à la conversation et récupérer les données du modèle
+    // Vérifier l'accès à la conversation
     const accessCheck = await conversationService.checkConversationAccess(
       conversationId,
       userId
@@ -30,13 +33,6 @@ class AIService {
 
     if (!accessCheck.canChat) {
       throw new Error(accessCheck.error || "Access denied");
-    }
-
-    // Utiliser le modèle de la conversation si modelData n'est pas fourni
-    const modelData = request.modelData || accessCheck.conversation?.model;
-
-    if (!modelData) {
-      throw new Error("Model data not available");
     }
 
     // Sauvegarder le message de l'utilisateur
@@ -48,44 +44,60 @@ class AIService {
     });
 
     // Mettre à jour les compteurs
-    if (accessCheck.isPremium && accessCheck.conversation?.paymentId) {
-      await conversationService.incrementPremiumCreditsUsed(
-        accessCheck.conversation.paymentId
+    await conversationService.incrementMessageCount(conversationId, userId);
+
+    // Générer une réponse IA seulement pour les messages gratuits
+    if (accessCheck.shouldUseAI) {
+      const aiResponse = await this.generateAIResponse(
+        message,
+        accessCheck.conversation.model
       );
+
+      // Sauvegarder la réponse IA
+      const aiMessage = await messageService.createMessage({
+        conversationId,
+        senderId: accessCheck.conversation.modelId,
+        isFromModel: true,
+        content: aiResponse,
+      });
+
+      return aiMessage;
     }
 
-    await conversationService.incrementMessageCount(conversationId);
-
-    // Générer la réponse IA
-    const aiResponse = await this.generateAIResponse(
-      message,
-      request.history,
-      modelData
-    );
-
-    // Sauvegarder la réponse de l'IA
-    const modelMessage = await messageService.createMessage({
-      conversationId,
-      senderId: modelData.id, // Utiliser l'ID du modèle comme sender
-      isFromModel: true,
-      content: aiResponse,
-    });
-
-    return aiResponse;
+    // Pour les conversations premium, ne pas générer de réponse automatique
+    // Les modérateurs répondront manuellement
+    return null;
   }
 
   private async generateAIResponse(
     message: string,
-    history: ChatMessage[],
     modelData: any
   ): Promise<string> {
-    // Implémentez votre logique de génération de réponse IA ici
-    console.log("Generating AI response for model:", modelData);
+    try {
+      // Utiliser le modèle Gemini
+      const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
-    // Exemple de réponse basique
-    return `Réponse du modèle ${
-      modelData.prenom || modelData.name
-    }: Merci pour votre message "${message}" !`;
+      const prompt = `
+        Tu es ${modelData.prenom}, un modèle avec les caractéristiques suivantes:
+        - Âge: ${modelData.age}
+        - Nationalité: ${modelData.nationalite}
+        - Passe-temps: ${modelData.passe_temps}
+        - Citation favorite: ${modelData.citation}
+        - Domicile: ${modelData.domicile}
+        
+        Réponds à ce message de manière naturelle et engageante: "${message}"
+        
+        Ta réponse doit être courte (max 2 phrases) et correspondre à ta personnalité.
+      `;
+
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      return response.text();
+    } catch (error) {
+      console.error("Erreur avec Gemini:", error);
+      // Réponse de fallback
+      return `Merci pour ton message! ${modelData.prenom} te répondra bientôt.`;
+    }
   }
 }
 

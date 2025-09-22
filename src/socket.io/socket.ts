@@ -66,17 +66,31 @@ export const configureSocket = (server: http.Server) => {
     });
 
     // Recevoir un nouveau message
+    // socket.io/socket.ts - CORRIGÉ
     socket.on(
       "send_message",
       async (data: {
         conversationId: number;
-        senderId: number;
         content: string;
         isFromModel: boolean;
+        senderId: number; // AJOUT
       }) => {
         try {
           const { conversationId, senderId, content, isFromModel } = data;
           console.log("New message received:", data);
+
+          // Vérifier l'accès à la conversation
+          const accessCheck = await conversationService.checkConversationAccess(
+            conversationId,
+            senderId
+          );
+
+          if (!accessCheck.canChat) {
+            socket.emit("message_error", {
+              error: accessCheck.error || "Access denied",
+            });
+            return;
+          }
 
           // Sauvegarder le message
           const message = await messageService.createMessage({

@@ -35,6 +35,14 @@ enum UserType {
   User
 }
 
+enum ConversationStatus {
+  ACTIVE
+  FREE_TRIAL
+  PAYMENT_REQUIRED
+  PREMIUM
+  ARCHIVED
+}
+
 model VerificationToken {
   id         Int      @id @default(autoincrement())
   user_id    Int
@@ -131,10 +139,10 @@ model ModelModerator {
 }
 
 model Conversation {
-  id       Int    @id @default(autoincrement())
+  id       Int                @id @default(autoincrement())
   modelId  Int
   clientId Int
-  status   String @default("active")
+  status   ConversationStatus @default(FREE_TRIAL)
 
   model         Model     @relation(fields: [modelId], references: [id])
   client        User      @relation(fields: [clientId], references: [id])

@@ -3,6 +3,7 @@ import { ModelModel } from "../models/ModelModel";
 import { Model, CreateModelRequest, UpdateModelRequest } from "../types";
 import * as fs from "fs";
 import path from "path";
+import prisma from "../config/prisma";
 
 export class ModelService {
   /**

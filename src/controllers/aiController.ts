@@ -1,66 +1,45 @@
-// controllers/chatController.ts
+// controllers/aiController.ts
 import { Request, Response } from "express";
-import { conversationService } from "../services/conversationService";
 import { aiService } from "../services/aiService";
-import { messageService } from "../services/messageService";
+import { conversationService } from "../services/conversationService";
 
-export class aiController {
-  static async chatWithAI(req: Request, res: Response) {
+class AIController {
+  async chatWithAI(req: Request, res: Response) {
     try {
-      const { message, conversationId, history, modelData } = req.body;
+      const { message, conversationId } = req.body;
       const userId = (req as any).user?.id;
 
-      // Validation des données requises
-      if (!message) {
-        return res.status(400).json({ error: "Message est requis" });
-      }
-
-      // Créer une nouvelle conversation si nécessaire
-      let actualConversationId = conversationId;
-      if (!conversationId) {
-        if (!userId || !modelData?.id) {
-          return res.status(400).json({ error: "userId ou modelId manquant" });
-        }
-
-        const newConversation = await conversationService.createConversation({
-          clientId: userId,
-          modelId: modelData.id,
+      if (!message || !conversationId) {
+        return res.status(400).json({
+          error: "Message and conversation ID are required",
         });
-
-        actualConversationId = newConversation.id;
       }
 
-      // Traiter le message
-      const aiResponse = await aiService.processChatMessage({
+      const result = await aiService.processChatMessage({
         message,
-        conversationId: parseInt(actualConversationId),
-        history: history || [],
-        modelData,
+        conversationId: parseInt(conversationId),
         userId,
       });
 
-      // Récupérer tous les messages de la conversation
-      const messages = await messageService.getMessagesByConversation(
-        parseInt(actualConversationId)
-      );
-
-      res.json({
-        response: aiResponse,
-        conversationId: parseInt(actualConversationId),
-        messages, // Retourner tous les messages
-      });
-    } catch (error: any) {
-      console.error("Error in chat controller:", error);
-
-      if (error.message === "Conversation not found") {
-        return res.status(404).json({ error: error.message });
+      // Émettre l'événement socket.io si une réponse IA a été générée
+      if (result) {
+        const io = req.app.get("socketio");
+        io.to(`conversation_${conversationId}`).emit("new_message", result);
       }
 
-      if (error.message === "Payment required") {
+      res.json({
+        success: true,
+        message: "Message processed successfully",
+        data: result,
+      });
+    } catch (error: any) {
+      console.error("Error in chatWithAI:", error);
+
+      // Gérer spécifiquement les erreurs de paiement requis
+      if (error.message.includes("Payment required")) {
         return res.status(402).json({
-          error: "Payment required",
-          message:
-            "Vous devez souscrire à un abonnement pour continuer à discuter",
+          error: error.message,
+          requiresPayment: true,
         });
       }
 
@@ -68,19 +47,33 @@ export class aiController {
     }
   }
 
-  // Nouveau contrôleur pour récupérer les messages d'une conversation
-  static async getConversationMessages(req: Request, res: Response) {
+  async getConversationMessages(req: Request, res: Response) {
     try {
       const { conversationId } = req.params;
+      const userId = (req as any).user?.id;
 
-      const messages = await messageService.getMessagesByConversation(
+      // Vérifier l'accès à la conversation
+      const accessCheck = await conversationService.checkConversationAccess(
+        parseInt(conversationId),
+        userId
+      );
+
+      if (!accessCheck.canChat) {
+        return res.status(403).json({
+          error: accessCheck.error || "Access denied",
+        });
+      }
+
+      const conversation = await conversationService.getConversationById(
         parseInt(conversationId)
       );
 
-      res.json(messages);
-    } catch (error: any) {
-      console.error("Error fetching messages:", error);
+      res.json(conversation);
+    } catch (error) {
+      console.error("Error fetching conversation messages:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   }
 }
+
+export const aiController = new AIController();

@@ -212,6 +212,51 @@ class MessageService {
       take: limit,
     });
   }
+
+  // services/messageService.ts - Méthodes supplémentaires
+  async createModelMessage(data: {
+    conversationId: number;
+    modelId: number;
+    content: string;
+  }) {
+    // Vérifier que l'expéditeur est bien le modèle de la conversation
+    const conversation = await prisma.conversation.findUnique({
+      where: { id: data.conversationId },
+    });
+
+    if (!conversation || conversation.modelId !== data.modelId) {
+      throw new Error("Unauthorized: Model doesn't own this conversation");
+    }
+
+    return await this.createMessage({
+      conversationId: data.conversationId,
+      senderId: data.modelId,
+      isFromModel: true,
+      content: data.content,
+    });
+  }
+
+  async createClientMessage(data: {
+    conversationId: number;
+    clientId: number;
+    content: string;
+  }) {
+    // Vérifier que l'expéditeur est bien le client de la conversation
+    const conversation = await prisma.conversation.findUnique({
+      where: { id: data.conversationId },
+    });
+
+    if (!conversation || conversation.clientId !== data.clientId) {
+      throw new Error("Unauthorized: Client doesn't own this conversation");
+    }
+
+    return await this.createMessage({
+      conversationId: data.conversationId,
+      senderId: data.clientId,
+      isFromModel: false,
+      content: data.content,
+    });
+  }
 }
 
 export const messageService = new MessageService();

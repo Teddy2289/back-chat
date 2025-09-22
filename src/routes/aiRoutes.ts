@@ -6,6 +6,10 @@ import { aiController } from "../controllers/aiController";
 const router = Router();
 
 router.post("/chat", authenticateToken, aiController.chatWithAI);
-router.get("/:conversationId/messages", aiController.getConversationMessages);
+router.get(
+  "/:conversationId/messages",
+  authenticateToken,
+  aiController.getConversationMessages
+);
 
 export default router;

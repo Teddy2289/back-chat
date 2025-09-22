@@ -14,6 +14,8 @@ import conversationRoutes from "./routes/conversationRoutes";
 import clientRoutes from "./routes/clientRoutes";
 import planPaiement from "./routes/paymentRoutes";
 import { handleWebhook } from "./controllers/paymentController";
+import messageRoutes from "./routes/messageRoutes";
+import moderatorRoutes from "./routes/moderatorRoutes";
 
 dotenv.config();
 
@@ -51,6 +53,8 @@ app.use("/api/payments", paiementRoutes);
 app.use("/api/conversations", conversationRoutes);
 app.use("/api/clients", clientRoutes);
 app.use("/api/payments/plans", planPaiement);
+app.use("/api/messages", messageRoutes);
+app.use("/api/moderators", moderatorRoutes);
 
 app.use("/uploads", express.static("uploads"));
 

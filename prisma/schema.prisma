@@ -156,6 +156,7 @@ model Conversation {
   updated_at           DateTime               @updatedAt
   FreeMessageAllowance FreeMessageAllowance[]
 
+  @@unique([modelId, clientId])
   @@map("conversations")
 }
 

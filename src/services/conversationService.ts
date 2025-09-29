@@ -47,9 +47,17 @@ class ConversationService {
       where: { id: conversationId },
       include: {
         payment: { include: { plan: true } },
-        model: true,
+        model: {
+          include: {
+            ModelModerator: {
+              where: { userId: userId },
+            },
+          },
+        },
         client: true,
-        FreeMessageAllowance: true,
+        FreeMessageAllowance: {
+          where: { userId: userId },
+        },
         messages: {
           orderBy: { created_at: "desc" },
           take: 10,
@@ -62,6 +70,17 @@ class ConversationService {
         canChat: false,
         isPremium: false,
         error: "Conversation not found",
+      };
+    }
+
+    const isClient = conversation.clientId === userId;
+    const isModerator = conversation.model.ModelModerator.length > 0;
+
+    if (!isClient && !isModerator) {
+      return {
+        canChat: false,
+        isPremium: false,
+        error: "Access denied: You are not authorized for this conversation",
       };
     }
 
